@@ -1104,12 +1104,38 @@ function handleGlobalClick(e) {
 }
 
 function handleGlobalKeydown(e) {
+  // Ignoriere Tastaturkürzel, wenn der Benutzer in einem Eingabefeld tippt
+  if (
+    document.activeElement &&
+    (document.activeElement.tagName === 'INPUT' ||
+     document.activeElement.tagName === 'TEXTAREA' ||
+     document.activeElement.isContentEditable)
+  ) {
+    return;
+  }
+
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  const isHotkey = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'k';
   
-  if (isHotkey) {
+  // Cmd+K / Ctrl+K -> Spotlight-Suche
+  const isHotkeyK = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'k';
+  if (isHotkeyK) {
     e.preventDefault();
     openSearchOverlay();
+    return;
+  }
+
+  // C -> Rezept-erfassen-Dialog (Create-Dialog) trigger-en (nur wenn keine Modifier wie Cmd/Ctrl/Alt gedrückt sind, z.B. Cmd+C)
+  if (e.key.toLowerCase() === 'c' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    openRecipeForm(null);
+    return;
+  }
+
+  // R -> Rezept-Sidebar toggle-n (nur wenn keine Modifier gedrückt sind, z.B. Cmd+R)
+  if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    isSidebarOpen.value = !isSidebarOpen.value;
+    return;
   }
 }
 </script>
