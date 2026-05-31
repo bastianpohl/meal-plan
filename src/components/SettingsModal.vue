@@ -89,6 +89,87 @@
           </p>
         </section>
 
+        <!-- Bring! Integration Section -->
+        <section class="settings-section">
+          <h3 class="settings-section-title">
+            <ion-icon name="cart-outline" style="color: #E63946;"></ion-icon>
+            Bring! Einkaufszettel-Kopplung
+          </h3>
+          <p class="settings-section-desc">Kopple die App mit deinem Bring! Account, um Zutaten per Knopfdruck dorthin zu exportieren.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Bring! E-Mail</label>
+              <input 
+                type="email" 
+                v-model="bringEmail" 
+                placeholder="beispiel@mail.de" 
+                class="form-control" 
+                style="width: 100%;"
+              />
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Bring! Passwort</label>
+              <input 
+                type="password" 
+                v-model="bringPassword" 
+                :placeholder="bringHasPassword ? '•••••••• (Gespeichert)' : 'Dein Bring! Passwort'" 
+                class="form-control" 
+                style="width: 100%;"
+              />
+            </div>
+
+            <button 
+              class="btn btn-secondary btn-full-width" 
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; margin-top: 6px;"
+              @click="handleBringTest"
+              :disabled="testingBring || !bringEmail"
+            >
+              <ion-icon name="sync-outline" :class="{ 'spin': testingBring }"></ion-icon>
+              {{ testingBring ? 'Verbinde...' : 'Verbindung testen & Listen laden' }}
+            </button>
+
+            <!-- Success List Selection Dropdown -->
+            <div v-if="bringLists.length > 0" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px;">
+              <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Wähle deine Einkaufsliste</label>
+              <select v-model="bringSelectedUuid" class="form-control" style="width: 100%; cursor: pointer;" @change="onListSelected">
+                <option value="" disabled>Bitte eine Liste auswählen...</option>
+                <option v-for="lst in bringLists" :key="lst.listUuid" :value="lst.listUuid">
+                  {{ lst.name }}
+                </option>
+              </select>
+            </div>
+            
+            <div v-else-if="bringSelectedName" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+              <ion-icon name="checkmark-circle-outline" style="color: var(--accent-primary); font-size: 18px;"></ion-icon>
+              Gekoppelt mit Liste: <strong style="color: var(--text-primary)">{{ bringSelectedName }}</strong>
+            </div>
+
+            <!-- Save Bring settings status and action -->
+            <div v-if="bringError" style="margin-top: 6px; font-size: 12px; color: var(--system-red); display: flex; align-items: center; gap: 4px;">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              {{ bringError }}
+            </div>
+            
+            <div v-if="bringSuccessMessage" style="margin-top: 6px; font-size: 12px; color: var(--accent-primary); display: flex; align-items: center; gap: 4px;">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+              {{ bringSuccessMessage }}
+            </div>
+
+            <button 
+              v-if="bringEmail"
+              class="btn btn-primary btn-full-width" 
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; margin-top: 10px;"
+              @click="handleBringSave"
+              :disabled="savingBring"
+            >
+              <ion-icon name="save-outline"></ion-icon>
+              {{ savingBring ? 'Wird gespeichert...' : 'Bring! Einstellungen speichern' }}
+            </button>
+          </div>
+        </section>
+
         <!-- Developer Functions (Only visible in dev environment) -->
         <section class="settings-section dev-section" v-if="isDevMode">
           <h3 class="settings-section-title dev-title" style="color: var(--accent-primary);">
@@ -176,6 +257,113 @@ async function handleDbReset() {
     alert('Netzwerkfehler beim Zurücksetzen der Datenbank.');
   } finally {
     isResetting.value = false;
+  }
+}
+
+// Bring! states
+const bringEmail = ref('');
+const bringPassword = ref('');
+const bringHasPassword = ref(false);
+const bringSelectedUuid = ref('');
+const bringSelectedName = ref('');
+const bringLists = ref([]);
+const testingBring = ref(false);
+const savingBring = ref(false);
+const bringError = ref('');
+const bringSuccessMessage = ref('');
+
+// Load Bring! settings when modal is opened
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    loadBringSettings();
+  }
+});
+
+async function loadBringSettings() {
+  bringError.value = '';
+  bringSuccessMessage.value = '';
+  bringLists.value = [];
+  try {
+    const res = await fetch('/api/settings/bring');
+    if (res.ok) {
+      const data = await res.json();
+      bringEmail.value = data.email || '';
+      bringHasPassword.value = data.hasPassword || false;
+      bringSelectedUuid.value = data.listUuid || '';
+      bringSelectedName.value = data.listName || '';
+      bringPassword.value = ''; // keep empty for editing
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Bring-Einstellungen:', err);
+  }
+}
+
+async function handleBringTest() {
+  bringError.value = '';
+  bringSuccessMessage.value = '';
+  testingBring.value = true;
+  try {
+    const res = await fetch('/api/settings/bring/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: bringEmail.value,
+        password: bringPassword.value || undefined
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      bringLists.value = data.lists || [];
+      bringSuccessMessage.value = data.message || 'Verbindung erfolgreich!';
+    } else {
+      bringError.value = data.error || 'Verbindung fehlgeschlagen.';
+    }
+  } catch (err) {
+    console.error('Fehler beim Testen der Bring-Verbindung:', err);
+    bringError.value = 'Netzwerkfehler beim Verbindungstest.';
+  } finally {
+    testingBring.value = false;
+  }
+}
+
+function onListSelected() {
+  const chosen = bringLists.value.find(l => l.listUuid === bringSelectedUuid.value);
+  if (chosen) {
+    bringSelectedName.value = chosen.name;
+  }
+}
+
+async function handleBringSave() {
+  bringError.value = '';
+  bringSuccessMessage.value = '';
+  savingBring.value = true;
+  try {
+    const res = await fetch('/api/settings/bring', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: bringEmail.value,
+        password: bringPassword.value || undefined,
+        listUuid: bringSelectedUuid.value,
+        listName: bringSelectedName.value
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      bringSuccessMessage.value = 'Einstellungen erfolgreich gespeichert!';
+      bringPassword.value = '';
+      bringHasPassword.value = true;
+      bringLists.value = []; // clear selection list after save
+    } else {
+      bringError.value = data.error || 'Fehler beim Speichern.';
+    }
+  } catch (err) {
+    console.error('Fehler beim Speichern der Bring-Einstellungen:', err);
+    bringError.value = 'Netzwerkfehler beim Speichern der Einstellungen.';
+  } finally {
+    savingBring.value = false;
   }
 }
 </script>

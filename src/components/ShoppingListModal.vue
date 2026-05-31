@@ -41,6 +41,27 @@
             Zutatenliste
           </h3>
 
+          <!-- Export to Bring! button -->
+          <div v-if="ingredients.length > 0 && isBringConfigured" style="margin-bottom: 16px;">
+            <button 
+              class="btn btn-primary btn-full-width" 
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; background-color: #E63946; border-color: #E63946;"
+              @click="exportToBring"
+              :disabled="exporting"
+            >
+              <ion-icon :name="exporting ? 'sync-outline' : 'paper-plane-outline'" :class="{ 'spin': exporting }"></ion-icon>
+              {{ exporting ? 'Wird übertragen...' : 'An Bring! senden' }}
+            </button>
+            <p v-if="exportError" style="font-size: 11px; color: var(--system-red); margin-top: 6px; display: flex; align-items: center; gap: 4px; margin-bottom: 0;">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              {{ exportError }}
+            </p>
+            <p v-if="exportSuccess" style="font-size: 11px; color: var(--accent-primary); margin-top: 6px; display: flex; align-items: center; gap: 4px; margin-bottom: 0;">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+              {{ exportSuccess }}
+            </p>
+          </div>
+
           <div v-if="loading" class="shopping-list-loading" style="text-align: center; padding: 40px; color: var(--text-muted);">
             <div class="loading-spinner" style="margin-bottom: 10px;"></div>
             Zutaten werden berechnet...
@@ -99,6 +120,10 @@ const daysCount = ref(7);
 const ingredients = ref([]);
 const loading = ref(false);
 const checkedItems = ref([]); // temporary checked off items while modal is open
+const isBringConfigured = ref(false);
+const exporting = ref(false);
+const exportError = ref('');
+const exportSuccess = ref('');
 
 async function fetchShoppingList() {
   if (!props.isOpen || !props.todayStr) return;
@@ -134,9 +159,60 @@ function toggleChecked(name) {
 watch(() => props.isOpen, (isOpenVal) => {
   if (isOpenVal) {
     checkedItems.value = [];
+    exportError.value = '';
+    exportSuccess.value = '';
+    checkBringConfig();
     fetchShoppingList();
   }
 });
+
+async function checkBringConfig() {
+  try {
+    const res = await fetch('/api/settings/bring');
+    if (res.ok) {
+      const data = await res.json();
+      isBringConfigured.value = !!(data.email && data.listUuid);
+    }
+  } catch (err) {
+    console.error('Fehler beim Prüfen der Bring-Konfiguration:', err);
+  }
+}
+
+async function exportToBring() {
+  exportError.value = '';
+  exportSuccess.value = '';
+  
+  // We only export UNCHECKED ingredients! High usability detail!
+  const uncheckedIngs = ingredients.value.filter(ing => !checkedItems.value.includes(ing.name.toLowerCase()));
+  
+  if (uncheckedIngs.length === 0) {
+    exportError.value = 'Keine offenen Zutaten zum Exportieren vorhanden.';
+    return;
+  }
+
+  exporting.value = true;
+  try {
+    const res = await fetch('/api/shopping-list/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ingredients: uncheckedIngs.map(ing => ing.name)
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      exportSuccess.value = data.message || 'Erfolgreich übertragen!';
+    } else {
+      exportError.value = data.error || 'Fehler beim Export.';
+    }
+  } catch (err) {
+    console.error('Fehler beim Export an Bring!:', err);
+    exportError.value = 'Netzwerkfehler beim Export.';
+  } finally {
+    exporting.value = false;
+  }
+}
 
 // Re-fetch if todayStr changes while open
 watch(() => props.todayStr, () => {

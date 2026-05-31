@@ -4,6 +4,7 @@ import multer from 'multer';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import BringApi from 'bring-shopping';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -91,6 +92,15 @@ const dbGet = (sql, params = []) => {
       else resolve(row);
     });
   });
+};
+
+const getSetting = async (key) => {
+  const row = await dbGet('SELECT value FROM app_settings WHERE key = ?', [key]);
+  return row ? row.value : null;
+};
+
+const setSetting = async (key, value) => {
+  await dbRun('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)', [key, value]);
 };
 
 // Database Schema creation & Self-Seeding
@@ -204,6 +214,14 @@ async function initDb() {
       name TEXT NOT NULL,
       checked INTEGER DEFAULT 0,
       FOREIGN KEY (assignment_id) REFERENCES plan_assignments(id) ON DELETE CASCADE
+    );
+  `);
+
+  // App Settings Table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
     );
   `);
 
@@ -1011,6 +1029,101 @@ app.get('/api/shopping-list', async (req, res) => {
   } catch (error) {
     console.error('Fehler bei Einkaufsliste:', error);
     res.status(500).json({ error: 'Serverfehler beim Erstellen der Einkaufsliste' });
+  }
+});
+
+// GET Bring! settings
+app.get('/api/settings/bring', async (req, res) => {
+  try {
+    const email = await getSetting('bring_email') || '';
+    const listUuid = await getSetting('bring_list_uuid') || '';
+    const listName = await getSetting('bring_list_name') || '';
+    const password = await getSetting('bring_password');
+    res.json({
+      email,
+      listUuid,
+      listName,
+      hasPassword: !!password
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Abrufen der Bring-Einstellungen' });
+  }
+});
+
+// POST Save Bring! settings
+app.post('/api/settings/bring', async (req, res) => {
+  try {
+    const { email, password, listUuid, listName } = req.body;
+    if (email !== undefined) await setSetting('bring_email', email.trim());
+    if (password !== undefined && password.trim() !== '') {
+      await setSetting('bring_password', password.trim());
+    }
+    if (listUuid !== undefined) await setSetting('bring_list_uuid', listUuid.trim());
+    if (listName !== undefined) await setSetting('bring_list_name', listName.trim());
+
+    res.json({ message: 'Bring-Einstellungen erfolgreich gespeichert' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Speichern der Bring-Einstellungen' });
+  }
+});
+
+// POST Test Bring! connection & Load Lists
+app.post('/api/settings/bring/test', async (req, res) => {
+  try {
+    let { email, password } = req.body;
+
+    if (!email) email = await getSetting('bring_email');
+    if (!password) password = await getSetting('bring_password');
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'E-Mail und Passwort sind erforderlich' });
+    }
+
+    const bring = new BringApi({ mail: email, password: password });
+    await bring.login();
+    const listsResponse = await bring.loadLists();
+
+    res.json({
+      success: true,
+      message: `Erfolgreich verbunden als ${bring.name || email}`,
+      lists: listsResponse.lists || []
+    });
+  } catch (error) {
+    console.error('Bring Connection Test Fehler:', error);
+    res.status(400).json({ error: `Verbindung fehlgeschlagen: ${error.message || error}` });
+  }
+});
+
+// POST Export shopping list items to Bring!
+app.post('/api/shopping-list/export', async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    if (!Array.isArray(ingredients) || ingredients.length === 0) {
+      return res.status(400).json({ error: 'Keine Zutaten zum Exportieren angegeben' });
+    }
+
+    const email = await getSetting('bring_email');
+    const password = await getSetting('bring_password');
+    const listUuid = await getSetting('bring_list_uuid');
+
+    if (!email || !password || !listUuid) {
+      return res.status(400).json({ error: 'Bring! ist nicht oder unvollständig konfiguriert. Bitte überprüfe die Einstellungen.' });
+    }
+
+    const bring = new BringApi({ mail: email, password: password });
+    await bring.login();
+
+    // Export each item
+    for (const ing of ingredients) {
+      await bring.saveItem(listUuid, ing, '');
+    }
+
+    res.json({ success: true, message: `${ingredients.length} Zutat(en) erfolgreich an Bring! übertragen.` });
+  } catch (error) {
+    console.error('Bring Export Fehler:', error);
+    res.status(500).json({ error: `Export an Bring! fehlgeschlagen: ${error.message || error}` });
   }
 });
 
