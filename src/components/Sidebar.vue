@@ -17,16 +17,21 @@
       </button>
     </div>
 
-    <!-- Search and Filters -->
-    <div class="sidebar-search-filter">
-      <div class="category-pills">
+    <!-- Top Tags Cloud -->
+    <div class="sidebar-tags-section" v-if="topTags.length > 0">
+      <span class="sidebar-tags-label">
+        <ion-icon name="pricetags-outline"></ion-icon>
+        Beliebte Tags
+      </span>
+      <div class="sidebar-tags-cloud">
         <button
-          v-for="cat in categories"
-          :key="cat.key"
-          :class="['filter-pill', { active: activeCategory === cat.key }]"
-          @click="selectCategory(cat.key)"
+          v-for="tag in topTags"
+          :key="tag.name"
+          class="sidebar-tag-pill"
+          @click="$emit('tag-click', tag.name)"
         >
-          {{ cat.name }}
+          #{{ tag.name }}
+          <span class="sidebar-tag-count">{{ tag.count }}</span>
         </button>
       </div>
     </div>
@@ -41,11 +46,11 @@
         <div v-if="loading" class="carousel-placeholder">
           <p>Lade Rezepte...</p>
         </div>
-        <div v-else-if="filteredRecipes.length === 0" class="carousel-placeholder">
-          <p>Keine Rezepte in dieser Kategorie gefunden.</p>
+        <div v-else-if="recipes.length === 0" class="carousel-placeholder">
+          <p>Keine Rezepte erfasst.</p>
         </div>
         <RecipeCard
-          v-for="recipe in filteredRecipes"
+          v-for="recipe in recipes"
           :key="recipe.id"
           :recipe="recipe"
           @click="$emit('recipe-click', $event)"
@@ -74,10 +79,6 @@ const props = defineProps({
     type: Array,
     required: true
   },
-  activeCategory: {
-    type: String,
-    required: true
-  },
   loading: {
     type: Boolean,
     default: false
@@ -87,7 +88,6 @@ const props = defineProps({
 const emit = defineEmits([
   'close',
   'create-recipe',
-  'update:activeCategory',
   'recipe-click',
   'tag-click',
   'quick-plan'
@@ -95,25 +95,23 @@ const emit = defineEmits([
 
 const carousel = ref(null);
 
-const categories = [
-  { key: 'All', name: 'Alle' },
-  { key: 'Pasta', name: 'Pasta' },
-  { key: 'Veggie', name: 'Veggie' },
-  { key: 'Fleisch', name: 'Fleisch' },
-  { key: 'Fisch', name: 'Fisch' },
-  { key: 'Dessert', name: 'Dessert' }
-];
-
-const filteredRecipes = computed(() => {
-  if (props.activeCategory === 'All') {
-    return props.recipes;
+const topTags = computed(() => {
+  const tagMap = {};
+  for (const recipe of props.recipes) {
+    if (recipe.tags && Array.isArray(recipe.tags)) {
+      for (const tag of recipe.tags) {
+        const normalized = tag.trim();
+        if (normalized) {
+          tagMap[normalized] = (tagMap[normalized] || 0) + 1;
+        }
+      }
+    }
   }
-  return props.recipes.filter(r => r.category === props.activeCategory);
+  return Object.entries(tagMap)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
 });
-
-function selectCategory(cat) {
-  emit('update:activeCategory', cat);
-}
 
 function scrollPrev() {
   if (carousel.value) {
@@ -127,3 +125,4 @@ function scrollNext() {
   }
 }
 </script>
+

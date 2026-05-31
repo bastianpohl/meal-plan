@@ -307,33 +307,74 @@ body.dark-theme .search-trigger-btn {
   flex-shrink: 0;
 }
 
-.category-pills {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
+/* Top Tags Cloud in Sidebar */
+.sidebar-tags-section {
+  padding: 0 20px;
+  flex-shrink: 0;
 }
 
-.filter-pill {
+.sidebar-tags-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.sidebar-tags-label ion-icon {
+  font-size: 13px;
+}
+
+.sidebar-tags-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sidebar-tag-pill {
   font-size: 11px;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 4px 10px;
   background: var(--bg-tertiary);
-  border: none;
-  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--accent-primary);
   border-radius: 50px;
   cursor: pointer;
   white-space: nowrap;
   transition: var(--transition-bounce);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
 }
 
-.filter-pill:hover {
-  background: var(--border-hover);
+.sidebar-tag-pill:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(85, 175, 200, 0.25);
 }
 
-.filter-pill.active {
-  background: var(--text-primary);
-  color: var(--bg-secondary);
+.sidebar-tag-pill:hover .sidebar-tag-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.sidebar-tag-count {
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--border-color);
+  color: var(--text-secondary);
+  padding: 1px 5px;
+  border-radius: 50px;
+  min-width: 16px;
+  text-align: center;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* Horizontal recipe cards swiper inside sidebar */

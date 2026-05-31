@@ -4,7 +4,6 @@
     <Sidebar
       :isOpen="isSidebarOpen"
       :recipes="recipes"
-      v-model:activeCategory="activeCategory"
       :loading="loadingRecipes"
       @close="isSidebarOpen = false"
       @create-recipe="openRecipeForm(null)"
@@ -172,7 +171,7 @@ function getMidnightDate(d = new Date()) {
 // REACTIVE STATE
 const recipes = ref([]);
 const plans = ref([]);
-const activeCategory = ref('All');
+
 const loadingRecipes = ref(false);
 const loadingSearch = ref(false);
 const searchResults = ref([]);
