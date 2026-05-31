@@ -38,6 +38,7 @@
         @open-slot-quick-assign="openSlotQuickAssignDropdown"
         @update-start-date="updateStartDate"
         @assignment-contextmenu="handleAssignmentContextMenu"
+        @today-in-viewport-change="isTodayInViewport = $event"
       />
     </main>
   </div>
@@ -688,9 +689,7 @@ const renderedDays = computed(() => {
   return days;
 });
 
-const isTodayInViewport = computed(() => {
-  return visibleDays.value.some(day => day.isToday);
-});
+const isTodayInViewport = ref(true);
 
 const spannedMondays = computed(() => {
   const mondays = new Set();

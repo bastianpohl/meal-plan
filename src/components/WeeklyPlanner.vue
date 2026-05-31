@@ -24,6 +24,7 @@
         v-for="day in visibleDays"
         :key="day.formattedDateStr"
         :class="['planner-day-col', { 'is-today': day.isToday, 'is-past': day.isPast }]"
+        :ref="el => { if (day.isToday) todayElementRef = el }"
         :data-day="day.formattedDateStr"
       >
         <div class="day-header">
@@ -284,13 +285,15 @@ const emit = defineEmits([
   'assign-recipe',
   'open-slot-quick-assign',
   'update-start-date',
-  'assignment-contextmenu'
+  'assignment-contextmenu',
+  'today-in-viewport-change'
 ]);
 
 
 
 const dragOverSlot = ref(null);
 const isTransitioningFromSwipe = ref(false);
+const todayElementRef = ref(null);
 
 // Swipe & Drag gestures
 const viewportRef = ref(null);
@@ -472,15 +475,46 @@ function triggerSlide(offset) {
   }
 }
 
+let todayObserver = null;
+
+function initTodayObserver() {
+  if (todayObserver) {
+    todayObserver.disconnect();
+  }
+
+  if (!todayElementRef.value || !viewportRef.value) {
+    return;
+  }
+
+  todayObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      emit('today-in-viewport-change', entry.isIntersecting);
+    }
+  }, {
+    root: viewportRef.value,
+    threshold: 0.1
+  });
+
+  todayObserver.observe(todayElementRef.value);
+}
+
+watch(() => todayElementRef.value, () => {
+  initTodayObserver();
+});
+
 onMounted(() => {
   if (viewportRef.value) {
     viewportRef.value.addEventListener('touchmove', handleTouchMove, { passive: false });
   }
+  initTodayObserver();
 });
 
 onUnmounted(() => {
   if (viewportRef.value) {
     viewportRef.value.removeEventListener('touchmove', handleTouchMove);
+  }
+  if (todayObserver) {
+    todayObserver.disconnect();
   }
 });
 
