@@ -136,8 +136,19 @@ const db = new sqlite3.Database(dbPath, async (err) => {
         day_of_week TEXT NOT NULL,
         meal_type TEXT NOT NULL,
         recipe_id INTEGER,
+        sort_order INTEGER DEFAULT 0,
         FOREIGN KEY (plan_id) REFERENCES weekly_plans(id) ON DELETE CASCADE,
         FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+      );
+    `);
+
+    await runQuery(`
+      CREATE TABLE assignment_ingredients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        assignment_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        checked INTEGER DEFAULT 0,
+        FOREIGN KEY (assignment_id) REFERENCES plan_assignments(id) ON DELETE CASCADE
       );
     `);
 

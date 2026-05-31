@@ -55,6 +55,7 @@
   <RecipeDetailModal
     :isOpen="isRecipeDetailsOpen"
     :recipe="detailRecipe"
+    :assignmentId="detailAssignmentId"
     :visibleDays="visibleDays"
     :assignments="rollingAssignments"
     @close="closeRecipeDetails"
@@ -189,6 +190,7 @@ const isSidebarOpen = ref(false);
 const isSearchOpen = ref(false);
 const isRecipeDetailsOpen = ref(false);
 const detailRecipe = ref(null);
+const detailAssignmentId = ref(null);
 const isRecipeFormOpen = ref(false);
 const recipeToEdit = ref(null);
 const isPlanCreateOpen = ref(false);
@@ -639,6 +641,7 @@ function mapToFlatAssignments(map) {
     for (const mt of mealTypes) {
       for (const asg of map[day][mt]) {
         flat.push({
+          id: asg.id,
           day_of_week: day,
           meal_type: mt,
           recipe_id: asg.recipe.id
@@ -979,11 +982,12 @@ function onPlanCreated(formattedMonday) {
 }
 
 // Details Modal
-async function openRecipeDetails(recipe) {
+async function openRecipeDetails(recipe, assignmentId = null) {
   try {
     const data = await apiFetch(`/api/recipes/${recipe.id}`);
     if (data) {
       detailRecipe.value = data;
+      detailAssignmentId.value = assignmentId;
       isRecipeDetailsOpen.value = true;
     }
   } catch (err) {
@@ -994,6 +998,7 @@ async function openRecipeDetails(recipe) {
 function closeRecipeDetails() {
   isRecipeDetailsOpen.value = false;
   detailRecipe.value = null;
+  detailAssignmentId.value = null;
 }
 
 // Form save event handlers

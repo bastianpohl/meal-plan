@@ -103,22 +103,94 @@
           
           <!-- Ingredients Section -->
           <div class="detail-body-section">
-            <h3>Zutaten</h3>
-            <ul class="detail-ingredients-list" v-if="localRecipe.ingredients && localRecipe.ingredients.length > 0">
-              <li v-for="(ing, index) in localRecipe.ingredients" :key="index">
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-bottom:0;">
-                  <input
-                    type="checkbox"
-                    :checked="checkedIngredients.includes(ing)"
-                    @change="toggleIngredient(ing)"
-                  />
-                  <span>{{ ing }}</span>
-                </label>
-              </li>
-            </ul>
-            <ul class="detail-ingredients-list" v-else>
-              <li style="color:var(--text-muted); font-style:italic;">Keine Zutaten hinterlegt.</li>
-            </ul>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+              <h3 style="margin-bottom: 0;">Zutaten</h3>
+              
+              <!-- Reset button for custom ingredients -->
+              <button 
+                v-if="assignmentId && isCustomIngredients" 
+                class="btn btn-secondary" 
+                style="padding: 4px 10px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; border-radius: 6px; box-shadow: none; border: 1px solid var(--border-color); height: 26px;"
+                @click="resetAssignmentIngredients"
+              >
+                <ion-icon name="reload-outline" style="font-size: 13px;"></ion-icon>
+                Auf Standard zurücksetzen
+              </button>
+            </div>
+            
+            <p v-if="assignmentId" class="settings-days-hint" style="margin-top: 2px; margin-bottom: 12px; font-size: 11px; color: var(--accent-primary); display: flex; align-items: center; gap: 4px; font-weight: 500;">
+              <ion-icon name="information-circle-outline" style="font-size: 14px;"></ion-icon>
+              {{ isCustomIngredients ? 'Zutaten für diesen Tag angepasst.' : 'Standard-Zutaten. Ändere die Liste, um sie anzupassen.' }}
+            </p>
+
+            <!-- Loading indicator for custom ingredients -->
+            <p v-if="assignmentId && loadingIngredients" style="color: var(--text-muted); font-style: italic; font-size: 13px; margin: 8px 0;">
+              Zutaten werden geladen...
+            </p>
+
+            <template v-else>
+              <!-- 1. Customized list mode (if assignmentId is active) -->
+              <ul class="detail-ingredients-list" v-if="assignmentId && assignmentIngredients.length > 0">
+                <li v-for="(ing, idx) in assignmentIngredients" :key="idx" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--border-color);">
+                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:0; flex-grow: 1;">
+                    <input
+                      type="checkbox"
+                      :checked="ing.checked"
+                      @change="toggleAssignmentIngredient(idx)"
+                    />
+                    <span :style="{ textDecoration: ing.checked ? 'line-through' : 'none', opacity: ing.checked ? 0.6 : 1 }">{{ ing.name }}</span>
+                  </label>
+                  
+                  <!-- Trash Icon to delete ingredient from this planned meal -->
+                  <button 
+                    @click="deleteAssignmentIngredient(idx)"
+                    style="background: none; border: none; padding: 4px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;"
+                    title="Zutat löschen"
+                  >
+                    <ion-icon name="close-circle-outline" style="font-size: 18px; transition: color 0.2s;" onmouseover="this.style.color='var(--system-red)'" onmouseout="this.style.color='var(--text-muted)'"></ion-icon>
+                  </button>
+                </li>
+              </ul>
+
+              <!-- 2. Standard list mode (no assignmentId or fallback if no ingredients) -->
+              <ul class="detail-ingredients-list" v-else-if="!assignmentId && localRecipe && localRecipe.ingredients && localRecipe.ingredients.length > 0">
+                <li v-for="(ing, index) in localRecipe.ingredients" :key="index">
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-bottom:0;">
+                    <input
+                      type="checkbox"
+                      :checked="checkedIngredients.includes(ing)"
+                      @change="toggleIngredient(ing)"
+                    />
+                    <span :style="{ textDecoration: checkedIngredients.includes(ing) ? 'line-through' : 'none', opacity: checkedIngredients.includes(ing) ? 0.6 : 1 }">{{ ing }}</span>
+                  </label>
+                </li>
+              </ul>
+              
+              <!-- 3. Empty list mode -->
+              <ul class="detail-ingredients-list" v-else>
+                <li style="color:var(--text-muted); font-style:italic;">Keine Zutaten hinterlegt.</li>
+              </ul>
+
+              <!-- 4. Add Ingredient Input Field (only visible when viewing a planned meal assignment) -->
+              <div v-if="assignmentId" class="add-ingredient-inline" style="display: flex; gap: 8px; margin-top: 14px; align-items: center;">
+                <input 
+                  type="text" 
+                  v-model="newIngredientName" 
+                  placeholder="Zutat hinzufügen (z. B. Salami)" 
+                  class="form-control"
+                  style="flex-grow: 1; height: 36px; font-size: 12px; padding: 6px 12px; border-radius: 8px; background: var(--bg-glass-light); border: 1px solid var(--border-color); color: var(--text-primary);"
+                  @keydown.enter="addAssignmentIngredient"
+                />
+                <button 
+                  class="btn btn-secondary" 
+                  style="height: 36px; padding: 0 12px; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: none;"
+                  @click="addAssignmentIngredient"
+                >
+                  <ion-icon name="add-outline" style="font-size: 16px;"></ion-icon>
+                  Hinzufügen
+                </button>
+              </div>
+            </template>
           </div>
           
           <!-- Notes Section -->
@@ -178,6 +250,10 @@ const props = defineProps({
     type: Object,
     default: null
   },
+  assignmentId: {
+    type: [Number, String],
+    default: null
+  },
   visibleDays: {
     type: Array,
     default: () => []
@@ -210,6 +286,94 @@ const DAYS_OF_WEEK = [
 const localRecipe = ref(null);
 const selectedImageIndex = ref(0);
 const checkedIngredients = ref([]);
+
+// Zuweisungsspezifische Zutaten-Zustände
+const assignmentIngredients = ref([]);
+const isCustomIngredients = ref(false);
+const newIngredientName = ref('');
+const loadingIngredients = ref(false);
+
+async function loadAssignmentIngredients() {
+  if (!props.assignmentId) {
+    assignmentIngredients.value = [];
+    isCustomIngredients.value = false;
+    return;
+  }
+  loadingIngredients.value = true;
+  try {
+    const res = await fetch(`/api/assignments/${props.assignmentId}/ingredients`);
+    if (res.ok) {
+      const data = await res.json();
+      assignmentIngredients.value = data.ingredients || [];
+      isCustomIngredients.value = data.isCustom || false;
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Zuweisungs-Zutaten:', err);
+  } finally {
+    loadingIngredients.value = false;
+  }
+}
+
+async function saveAssignmentIngredients(updatedList) {
+  if (!props.assignmentId) return;
+  try {
+    const res = await fetch(`/api/assignments/${props.assignmentId}/ingredients`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredients: updatedList })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      assignmentIngredients.value = data.ingredients || [];
+      isCustomIngredients.value = data.isCustom || false;
+    }
+  } catch (err) {
+    console.error('Fehler beim Speichern der Zuweisungs-Zutaten:', err);
+  }
+}
+
+function toggleAssignmentIngredient(index) {
+  const list = [...assignmentIngredients.value];
+  list[index].checked = !list[index].checked;
+  saveAssignmentIngredients(list);
+}
+
+function addAssignmentIngredient() {
+  const name = newIngredientName.value.trim();
+  if (!name) return;
+  const list = [...assignmentIngredients.value];
+  list.push({ name, checked: false });
+  saveAssignmentIngredients(list);
+  newIngredientName.value = '';
+}
+
+function deleteAssignmentIngredient(index) {
+  const list = [...assignmentIngredients.value];
+  list.splice(index, 1);
+  saveAssignmentIngredients(list);
+}
+
+async function resetAssignmentIngredients() {
+  if (!props.assignmentId || !confirm('Möchtest du die Zutaten wirklich auf den Standard des Originalrezepts zurücksetzen? Alle individuellen Änderungen an diesem Tag gehen verloren!')) return;
+  try {
+    const res = await fetch(`/api/assignments/${props.assignmentId}/ingredients`, { method: 'DELETE' });
+    if (res.ok) {
+      loadAssignmentIngredients();
+    }
+  } catch (err) {
+    console.error('Fehler beim Zurücksetzen der Zuweisungs-Zutaten:', err);
+  }
+}
+
+// Watchers for props
+watch(() => [props.assignmentId, props.isOpen], () => {
+  if (props.isOpen && props.assignmentId) {
+    loadAssignmentIngredients();
+  } else {
+    assignmentIngredients.value = [];
+    isCustomIngredients.value = false;
+  }
+}, { immediate: true });
 
 watch(() => props.recipe, (newVal) => {
   localRecipe.value = newVal;

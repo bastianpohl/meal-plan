@@ -174,7 +174,7 @@ async function initDb() {
     );
   `);
 
-  // Plan Assignments Table (with meal_type)
+  // Plan Assignments Table (with meal_type and sort_order)
   await dbRun(`
     CREATE TABLE IF NOT EXISTS plan_assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -182,8 +182,28 @@ async function initDb() {
       day_of_week TEXT NOT NULL,
       meal_type TEXT NOT NULL,
       recipe_id INTEGER,
+      sort_order INTEGER DEFAULT 0,
       FOREIGN KEY (plan_id) REFERENCES weekly_plans(id) ON DELETE CASCADE,
       FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Auto-migration to add sort_order column to plan_assignments if missing from older databases
+  try {
+    await dbRun('ALTER TABLE plan_assignments ADD COLUMN sort_order INTEGER DEFAULT 0;');
+    console.log('Datenbank-Migration: Spalte "sort_order" wurde erfolgreich zu "plan_assignments" hinzugefügt.');
+  } catch (err) {
+    // Fehler wird ignoriert, wenn die Spalte bereits existiert
+  }
+
+  // Assignment Ingredients Table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS assignment_ingredients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      assignment_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      checked INTEGER DEFAULT 0,
+      FOREIGN KEY (assignment_id) REFERENCES plan_assignments(id) ON DELETE CASCADE
     );
   `);
 
@@ -728,7 +748,7 @@ app.get('/api/plans/:id', async (req, res) => {
     const plan = await dbGet('SELECT * FROM weekly_plans WHERE id = ?', [planId]);
     if (!plan) return res.status(404).json({ error: 'Plan nicht gefunden' });
 
-    const assignments = await dbAll('SELECT id, day_of_week, meal_type, recipe_id FROM plan_assignments WHERE plan_id = ?', [planId]);
+    const assignments = await dbAll('SELECT id, day_of_week, meal_type, recipe_id, sort_order FROM plan_assignments WHERE plan_id = ? ORDER BY sort_order ASC', [planId]);
 
     const populated = [];
     for (const asg of assignments) {
@@ -756,11 +776,11 @@ app.get('/api/plans/:id', async (req, res) => {
   }
 });
 
-// Update assignments (accepts meal_type)
+// Update assignments (accepts meal_type and maintains assignment stability)
 app.put('/api/plans/:id/assignments', async (req, res) => {
   try {
     const planId = req.params.id;
-    const { assignments } = req.body; // Array of { day_of_week, meal_type, recipe_id }
+    const { assignments } = req.body; // Array of { id, day_of_week, meal_type, recipe_id }
 
     const plan = await dbGet('SELECT id FROM weekly_plans WHERE id = ?', [planId]);
     if (!plan) return res.status(404).json({ error: 'Plan nicht gefunden' });
@@ -769,20 +789,42 @@ app.put('/api/plans/:id/assignments', async (req, res) => {
       return res.status(400).json({ error: 'Ungültiges Assignments-Format' });
     }
 
-    await dbRun('DELETE FROM plan_assignments WHERE plan_id = ?', [planId]);
+    // Incremental Update to keep existing assignment IDs
+    const existingAsgs = await dbAll('SELECT id FROM plan_assignments WHERE plan_id = ?', [planId]);
+    const existingIds = existingAsgs.map(a => a.id);
+    const incomingIds = assignments.map(a => a.id).filter(id => id != null);
 
-    for (const asg of assignments) {
-      const { day_of_week, meal_type, recipe_id } = asg;
-      if (!day_of_week || !meal_type || !recipe_id) continue;
-      await dbRun(
-        'INSERT INTO plan_assignments (plan_id, day_of_week, meal_type, recipe_id) VALUES (?, ?, ?, ?)',
-        [planId, day_of_week, meal_type, recipe_id]
-      );
+    // Delete assignments no longer present in incoming list
+    const deleteIds = existingIds.filter(id => !incomingIds.includes(id));
+    if (deleteIds.length > 0) {
+      const placeholders = deleteIds.map(() => '?').join(',');
+      await dbRun(`DELETE FROM plan_assignments WHERE id IN (${placeholders})`, deleteIds);
     }
 
-    // Return populated plan
+    // Insert or update assignments with sort_order
+    for (let index = 0; index < assignments.length; index++) {
+      const asg = assignments[index];
+      const { id, day_of_week, meal_type, recipe_id } = asg;
+      if (!day_of_week || !meal_type || !recipe_id) continue;
+
+      if (id && existingIds.includes(id)) {
+        // Update existing assignment
+        await dbRun(
+          'UPDATE plan_assignments SET day_of_week = ?, meal_type = ?, recipe_id = ?, sort_order = ? WHERE id = ?',
+          [day_of_week, meal_type, recipe_id, index, id]
+        );
+      } else {
+        // Insert new assignment
+        await dbRun(
+          'INSERT INTO plan_assignments (plan_id, day_of_week, meal_type, recipe_id, sort_order) VALUES (?, ?, ?, ?, ?)',
+          [planId, day_of_week, meal_type, recipe_id, index]
+        );
+      }
+    }
+
+    // Return populated plan (ordered by sort_order)
     const updatedPlan = await dbGet('SELECT * FROM weekly_plans WHERE id = ?', [planId]);
-    const finalAssignments = await dbAll('SELECT id, day_of_week, meal_type, recipe_id FROM plan_assignments WHERE plan_id = ?', [planId]);
+    const finalAssignments = await dbAll('SELECT id, day_of_week, meal_type, recipe_id, sort_order FROM plan_assignments WHERE plan_id = ? ORDER BY sort_order ASC', [planId]);
     
     const populated = [];
     for (const asg of finalAssignments) {
@@ -823,6 +865,91 @@ app.delete('/api/plans/:id', async (req, res) => {
     res.json({ message: 'Plan erfolgreich gelöscht' });
   } catch (error) {
     res.status(500).json({ error: 'Serverfehler' });
+  }
+});
+
+// GET custom ingredients for plan assignment
+app.get('/api/assignments/:id/ingredients', async (req, res) => {
+  try {
+    const assignmentId = req.params.id;
+    const asg = await dbGet('SELECT * FROM plan_assignments WHERE id = ?', [assignmentId]);
+    if (!asg) return res.status(404).json({ error: 'Zuweisung nicht gefunden' });
+
+    // Check if assignment has custom ingredients
+    const customIngs = await dbAll('SELECT id, name, checked FROM assignment_ingredients WHERE assignment_id = ?', [assignmentId]);
+
+    if (customIngs.length > 0) {
+      return res.json({
+        isCustom: true,
+        ingredients: customIngs.map(i => ({ id: i.id, name: i.name, checked: i.checked === 1 }))
+      });
+    }
+
+    // Fallback: Fetch recipe standard ingredients
+    const recipeIngs = await dbAll(`
+      SELECT i.name FROM ingredients i 
+      JOIN recipe_ingredients ri ON i.id = ri.ingredient_id 
+      WHERE ri.recipe_id = ?
+    `, [asg.recipe_id]);
+
+    res.json({
+      isCustom: false,
+      ingredients: recipeIngs.map((i, idx) => ({ id: null, name: i.name, checked: false }))
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Abrufen der Zutaten' });
+  }
+});
+
+// PUT custom ingredients for plan assignment
+app.put('/api/assignments/:id/ingredients', async (req, res) => {
+  try {
+    const assignmentId = req.params.id;
+    const { ingredients } = req.body; // Array of { name, checked }
+    const asg = await dbGet('SELECT id FROM plan_assignments WHERE id = ?', [assignmentId]);
+    if (!asg) return res.status(404).json({ error: 'Zuweisung nicht gefunden' });
+
+    if (!Array.isArray(ingredients)) {
+      return res.status(400).json({ error: 'Ungültiges Zutaten-Format' });
+    }
+
+    // Delete existing custom ingredients
+    await dbRun('DELETE FROM assignment_ingredients WHERE assignment_id = ?', [assignmentId]);
+
+    // Insert new custom ingredients
+    for (const ing of ingredients) {
+      const nameTrim = ing.name ? ing.name.trim() : '';
+      if (!nameTrim) continue;
+      await dbRun(
+        'INSERT INTO assignment_ingredients (assignment_id, name, checked) VALUES (?, ?, ?)',
+        [assignmentId, nameTrim, ing.checked ? 1 : 0]
+      );
+    }
+
+    const saved = await dbAll('SELECT id, name, checked FROM assignment_ingredients WHERE assignment_id = ?', [assignmentId]);
+    res.json({
+      isCustom: true,
+      ingredients: saved.map(i => ({ id: i.id, name: i.name, checked: i.checked === 1 }))
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Speichern der Zutaten' });
+  }
+});
+
+// DELETE custom ingredients for plan assignment (reset to defaults)
+app.delete('/api/assignments/:id/ingredients', async (req, res) => {
+  try {
+    const assignmentId = req.params.id;
+    const asg = await dbGet('SELECT id FROM plan_assignments WHERE id = ?', [assignmentId]);
+    if (!asg) return res.status(404).json({ error: 'Zuweisung nicht gefunden' });
+
+    await dbRun('DELETE FROM assignment_ingredients WHERE assignment_id = ?', [assignmentId]);
+    res.json({ message: 'Zutaten erfolgreich auf Standard zurückgesetzt' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Zurücksetzen der Zutaten' });
   }
 });
 

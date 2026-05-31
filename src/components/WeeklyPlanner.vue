@@ -68,7 +68,7 @@
               @dragover="day.isPast ? null : onAssignmentDragOver($event, index, day.formattedDateStr, 'lunch')"
               @dragleave="onAssignmentDragLeave($event)"
               @drop.stop="day.isPast ? null : onAssignmentDrop($event, index, day.formattedDateStr, 'lunch')"
-              @click="$emit('recipe-click', asg.recipe)"
+              @click="$emit('recipe-click', asg.recipe, asg.id)"
             >
               <div class="assigned-recipe-card-image">
                 <img
@@ -179,7 +179,7 @@
               @dragover="day.isPast ? null : onAssignmentDragOver($event, index, day.formattedDateStr, 'dinner')"
               @dragleave="onAssignmentDragLeave($event)"
               @drop.stop="day.isPast ? null : onAssignmentDrop($event, index, day.formattedDateStr, 'dinner')"
-              @click="$emit('recipe-click', asg.recipe)"
+              @click="$emit('recipe-click', asg.recipe, asg.id)"
             >
               <div class="assigned-recipe-card-image">
                 <img
