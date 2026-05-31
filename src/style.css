@@ -2740,13 +2740,13 @@ textarea {
   /* Mobil Alphabet-Vergrößerung für hervorragende Touch-Bedienung */
   .sidebar-letter-nav {
     padding: 8px 4px;
-    gap: 3px;
+    gap: 4px;
   }
 
   .letter-nav-item {
-    font-size: 11px !important;
-    width: 22px !important;
-    height: 20px !important;
+    font-size: 12px !important;
+    width: 26px !important;
+    height: 23px !important;
     border-radius: 4px;
   }
 }

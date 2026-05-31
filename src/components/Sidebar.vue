@@ -232,7 +232,11 @@ function onListScroll() {
 
 // Letter nav drag (mouse)
 function startLetterNavDrag(e) {
-  const nav = e.currentTarget;
+  const item = document.elementFromPoint(e.clientX, e.clientY);
+  if (item && item.dataset && item.dataset.letter) {
+    scrollToLetter(item.dataset.letter);
+  }
+
   function onMove(ev) {
     const item = document.elementFromPoint(ev.clientX, ev.clientY);
     if (item && item.dataset && item.dataset.letter) {
@@ -249,6 +253,12 @@ function startLetterNavDrag(e) {
 
 // Letter nav drag (touch)
 function startLetterNavTouch(e) {
+  const touch = e.touches[0];
+  const item = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (item && item.dataset && item.dataset.letter) {
+    scrollToLetter(item.dataset.letter);
+  }
+
   function onMove(ev) {
     const touch = ev.touches[0];
     const item = document.elementFromPoint(touch.clientX, touch.clientY);
