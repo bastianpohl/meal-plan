@@ -47,6 +47,11 @@
         </button>
       </div>
 
+      <!-- Shopping List (Einkaufsliste) button -->
+      <button class="btn-header-action" title="Einkaufsliste" @click="$emit('open-shopping-list')">
+        <ion-icon name="cart-outline"></ion-icon>
+      </button>
+
       <!-- Settings gear button -->
       <button class="btn-header-action btn-settings" title="Einstellungen" @click="$emit('open-settings')">
         <ion-icon name="settings-outline"></ion-icon>
@@ -74,7 +79,8 @@ defineEmits([
   'open-search',
   'slide-days',
   'go-today',
-  'open-settings'
+  'open-settings',
+  'open-shopping-list'
 ]);
 
 const isMac = ref(true);

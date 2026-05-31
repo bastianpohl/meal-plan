@@ -904,6 +904,116 @@ app.get('/api/assignments/:id/ingredients', async (req, res) => {
   }
 });
 
+// GET shopping list (aggregated ingredients for N days)
+app.get('/api/shopping-list', async (req, res) => {
+  try {
+    const startDateStr = req.query.startDate;
+    const daysCount = parseInt(req.query.days, 10) || 7;
+
+    if (!startDateStr) {
+      return res.status(400).json({ error: 'startDate ist erforderlich (Format: YYYY-MM-DD)' });
+    }
+
+    if (isNaN(daysCount) || daysCount < 1 || daysCount > 10) {
+      return res.status(400).json({ error: 'days muss zwischen 1 und 10 liegen' });
+    }
+
+    const parts = startDateStr.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const dayVal = parseInt(parts[2], 10);
+    const start = new Date(year, month, dayVal);
+
+    if (isNaN(start.getTime())) {
+      return res.status(400).json({ error: 'Ungültiges startDate' });
+    }
+
+    const EnglishDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // Helper to get ISO date string YYYY-MM-DD
+    const formatISO = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    // Helper to get Monday of the week
+    const getMondayOfDate = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.setDate(diff));
+    };
+
+    const ingredientCounts = {}; // lowercase_name -> { name, count }
+
+    // Loop through N days
+    for (let i = 0; i < daysCount; i++) {
+      const current = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+
+      const mondayStr = formatISO(getMondayOfDate(current));
+      const dayOfWeekKey = EnglishDays[current.getDay()];
+
+      // Find plan for this week
+      const plan = await dbGet('SELECT id FROM weekly_plans WHERE start_date = ?', [mondayStr]);
+      if (plan) {
+        // Find assignments for this day
+        const assignments = await dbAll(
+          'SELECT id, recipe_id FROM plan_assignments WHERE plan_id = ? AND day_of_week = ?',
+          [plan.id, dayOfWeekKey]
+        );
+
+        for (const asg of assignments) {
+          // Check if custom ingredients exist
+          const customIngs = await dbAll(
+            'SELECT name FROM assignment_ingredients WHERE assignment_id = ?',
+            [asg.id]
+          );
+
+          let ings = [];
+          if (customIngs.length > 0) {
+            ings = customIngs.map(ci => ci.name);
+          } else {
+            // Get standard ingredients
+            const standardIngs = await dbAll(`
+              SELECT i.name FROM ingredients i
+              JOIN recipe_ingredients ri ON i.id = ri.ingredient_id
+              WHERE ri.recipe_id = ?
+            `, [asg.recipe_id]);
+            ings = standardIngs.map(si => si.name);
+          }
+
+          // Aggregate ingredients
+          for (const name of ings) {
+            const trimmed = name.trim();
+            if (!trimmed) continue;
+            const lower = trimmed.toLowerCase();
+            if (ingredientCounts[lower]) {
+              ingredientCounts[lower].count += 1;
+            } else {
+              ingredientCounts[lower] = {
+                name: trimmed, // keep original casing
+                count: 1
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // Convert to sorted array
+    const result = Object.values(ingredientCounts).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Fehler bei Einkaufsliste:', error);
+    res.status(500).json({ error: 'Serverfehler beim Erstellen der Einkaufsliste' });
+  }
+});
+
 // PUT custom ingredients for plan assignment
 app.put('/api/assignments/:id/ingredients', async (req, res) => {
   try {

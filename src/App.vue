@@ -23,6 +23,7 @@
         @slide-days="slideDays"
         @go-today="goToday"
         @open-settings="isSettingsOpen = true"
+        @open-shopping-list="isShoppingListOpen = true"
       />
 
       <!-- Spalten Grid -->
@@ -96,6 +97,13 @@
     @close="isSettingsOpen = false"
     @update:theme="applyTheme"
     @update:daysCount="changeDaysCount"
+  />
+
+  <!-- Shopping List Modal -->
+  <ShoppingListModal
+    :isOpen="isShoppingListOpen"
+    :todayStr="todayStr"
+    @close="isShoppingListOpen = false"
   />
 
   <!-- FLOATING QUICK ASSIGN DROPDOWNS -->
@@ -271,6 +279,7 @@ import RecipeDetailModal from './components/RecipeDetailModal.vue';
 import PlanCreateModal from './components/PlanCreateModal.vue';
 import SearchOverlay from './components/SearchOverlay.vue';
 import SettingsModal from './components/SettingsModal.vue';
+import ShoppingListModal from './components/ShoppingListModal.vue';
 
 const EnglishDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -292,6 +301,8 @@ const searchQuery = ref('');
 // Rolling calendar timeline state
 const rollingDaysCount = ref(parseInt(localStorage.getItem('rolling_days_count') || '7'));
 const isSettingsOpen = ref(false);
+const isShoppingListOpen = ref(false);
+const todayStr = computed(() => formatDateISO(getMidnightDate()));
 const themePreference = ref(localStorage.getItem('theme_preference') || 'system');
 const rollingStartDate = ref(getMidnightDate());
 const weeklyPlansCache = ref({});
