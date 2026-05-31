@@ -1152,7 +1152,8 @@ async function loadContextIngredients() {
   try {
     const data = await apiFetch(`/api/assignments/${activeContextMenu.value.id}/ingredients`);
     if (data) {
-      contextIngredients.value = data.ingredients || [];
+      const rawIngs = data.ingredients || [];
+      contextIngredients.value = [...rawIngs].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
       contextIsCustom.value = data.isCustom || false;
     }
   } catch (err) {
@@ -1170,7 +1171,8 @@ async function saveContextIngredients(updatedList) {
       body: { ingredients: updatedList }
     });
     if (data) {
-      contextIngredients.value = data.ingredients || [];
+      const rawIngs = data.ingredients || [];
+      contextIngredients.value = [...rawIngs].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
       contextIsCustom.value = data.isCustom || false;
     }
   } catch (err) {

@@ -345,6 +345,7 @@ async function populateRecipeDetails(recipesList) {
       SELECT i.name FROM ingredients i 
       JOIN recipe_ingredients ri ON i.id = ri.ingredient_id 
       WHERE ri.recipe_id = ?
+      ORDER BY i.name COLLATE NOCASE ASC
     `, [r.id]);
 
     const coverImg = images.find(img => img.is_cover === 1) || images[0];
@@ -876,7 +877,7 @@ app.get('/api/assignments/:id/ingredients', async (req, res) => {
     if (!asg) return res.status(404).json({ error: 'Zuweisung nicht gefunden' });
 
     // Check if assignment has custom ingredients
-    const customIngs = await dbAll('SELECT id, name, checked FROM assignment_ingredients WHERE assignment_id = ?', [assignmentId]);
+    const customIngs = await dbAll('SELECT id, name, checked FROM assignment_ingredients WHERE assignment_id = ? ORDER BY name COLLATE NOCASE ASC', [assignmentId]);
 
     if (customIngs.length > 0) {
       return res.json({
@@ -890,6 +891,7 @@ app.get('/api/assignments/:id/ingredients', async (req, res) => {
       SELECT i.name FROM ingredients i 
       JOIN recipe_ingredients ri ON i.id = ri.ingredient_id 
       WHERE ri.recipe_id = ?
+      ORDER BY i.name COLLATE NOCASE ASC
     `, [asg.recipe_id]);
 
     res.json({
@@ -927,7 +929,7 @@ app.put('/api/assignments/:id/ingredients', async (req, res) => {
       );
     }
 
-    const saved = await dbAll('SELECT id, name, checked FROM assignment_ingredients WHERE assignment_id = ?', [assignmentId]);
+    const saved = await dbAll('SELECT id, name, checked FROM assignment_ingredients WHERE assignment_id = ? ORDER BY name COLLATE NOCASE ASC', [assignmentId]);
     res.json({
       isCustom: true,
       ingredients: saved.map(i => ({ id: i.id, name: i.name, checked: i.checked === 1 }))

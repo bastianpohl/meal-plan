@@ -304,7 +304,8 @@ async function loadAssignmentIngredients() {
     const res = await fetch(`/api/assignments/${props.assignmentId}/ingredients`);
     if (res.ok) {
       const data = await res.json();
-      assignmentIngredients.value = data.ingredients || [];
+      const rawIngs = data.ingredients || [];
+      assignmentIngredients.value = [...rawIngs].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
       isCustomIngredients.value = data.isCustom || false;
     }
   } catch (err) {
@@ -324,7 +325,8 @@ async function saveAssignmentIngredients(updatedList) {
     });
     if (res.ok) {
       const data = await res.json();
-      assignmentIngredients.value = data.ingredients || [];
+      const rawIngs = data.ingredients || [];
+      assignmentIngredients.value = [...rawIngs].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
       isCustomIngredients.value = data.isCustom || false;
     }
   } catch (err) {
@@ -376,7 +378,15 @@ watch(() => [props.assignmentId, props.isOpen], () => {
 }, { immediate: true });
 
 watch(() => props.recipe, (newVal) => {
-  localRecipe.value = newVal;
+  if (newVal) {
+    const cloned = { ...newVal };
+    if (cloned.ingredients && Array.isArray(cloned.ingredients)) {
+      cloned.ingredients = [...cloned.ingredients].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }
+    localRecipe.value = cloned;
+  } else {
+    localRecipe.value = null;
+  }
   selectedImageIndex.value = 0;
 }, { immediate: true });
 
