@@ -69,6 +69,10 @@
             Kalenderansicht
           </h3>
           <p class="settings-section-desc">Lege fest, wie viele Tage gleichzeitig angezeigt werden.</p>
+          <p class="settings-section-hint">
+            <ion-icon name="phone-portrait-outline"></ion-icon>
+            Auf Smartphones wird immer nur ein Tag angezeigt. Diese Einstellung gilt nur für Tablets und Desktop.
+          </p>
 
           <div class="settings-days-grid">
             <button
