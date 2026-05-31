@@ -57,39 +57,40 @@
             <div class="sidebar-letter-header" :data-letter="group.letter">
               {{ group.letter }}
             </div>
-            <div
-              v-for="recipe in group.recipes"
-              :key="recipe.id"
-              class="sidebar-recipe-item"
-              :data-id="recipe.id"
-              draggable="true"
-              @dragstart="onDragStart($event, recipe)"
-              @dragend="onDragEnd"
-              @click="$emit('recipe-click', recipe)"
-            >
-              <div class="sidebar-recipe-thumb">
-                <img
-                  v-if="recipe.cover_image"
-                  :src="'/' + recipe.cover_image"
-                  alt=""
-                  loading="lazy"
-                  draggable="false"
-                />
-                <div v-else class="sidebar-recipe-thumb-placeholder">
-                  <ion-icon :name="getCategoryIcon(recipe.category)"></ion-icon>
-                </div>
-              </div>
-              <div class="sidebar-recipe-info">
-                <span class="sidebar-recipe-name">{{ recipe.title }}</span>
-                <span class="sidebar-recipe-category">{{ recipe.category || 'Allgemein' }}</span>
-              </div>
-              <button
-                class="btn-quick-plan-sidebar"
-                title="Schnell einplanen"
-                @click.stop="onQuickPlanClick($event, recipe)"
+            <div class="sidebar-recipe-grid">
+              <div
+                v-for="recipe in group.recipes"
+                :key="recipe.id"
+                class="sidebar-recipe-item polaroid-style"
+                :data-id="recipe.id"
+                draggable="true"
+                @dragstart="onDragStart($event, recipe)"
+                @dragend="onDragEnd"
+                @click="$emit('recipe-click', recipe)"
               >
-                <ion-icon name="calendar-outline"></ion-icon>
-              </button>
+                <div class="sidebar-recipe-thumb">
+                  <img
+                    v-if="recipe.cover_image"
+                    :src="'/' + recipe.cover_image"
+                    alt=""
+                    loading="lazy"
+                    draggable="false"
+                  />
+                  <div v-else class="sidebar-recipe-thumb-placeholder">
+                    <ion-icon :name="getCategoryIcon(recipe.category)"></ion-icon>
+                  </div>
+                </div>
+                <div class="sidebar-recipe-info">
+                  <span class="sidebar-recipe-name">{{ recipe.title }}</span>
+                </div>
+                <button
+                  class="btn-quick-plan-sidebar"
+                  title="Schnell einplanen"
+                  @click.stop="onQuickPlanClick($event, recipe)"
+                >
+                  <ion-icon name="calendar-outline"></ion-icon>
+                </button>
+              </div>
             </div>
           </div>
         </template>
