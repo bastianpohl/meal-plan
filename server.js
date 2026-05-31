@@ -51,6 +51,11 @@ const upload = multer({
 
 // SQLite DB initialization
 const dbPath = path.join(__dirname, 'database.sqlite');
+const dbExists = fs.existsSync(dbPath);
+if (!dbExists) {
+  console.log('Datenbankdatei "database.sqlite" nicht gefunden. Eine neue SQLite-Datenbank wird erstellt und das Schema initialisiert...');
+}
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Fehler beim Öffnen der SQLite-Datenbank:', err.message);
@@ -818,6 +823,52 @@ app.delete('/api/plans/:id', async (req, res) => {
     res.json({ message: 'Plan erfolgreich gelöscht' });
   } catch (error) {
     res.status(500).json({ error: 'Serverfehler' });
+  }
+});
+
+// POST Reset database (Dev only)
+app.post('/api/dev/reset', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Reset-Prozess ist in der Produktionsumgebung deaktiviert!' });
+  }
+
+  try {
+    console.log('Dev-Reset: Datenbank wird zurückgesetzt...');
+
+    // 1. Tabellen löschen (geordnete Reihenfolge wegen Foreign Keys)
+    await dbRun('PRAGMA foreign_keys = OFF;');
+    await dbRun('DROP TABLE IF EXISTS recipe_ingredients;');
+    await dbRun('DROP TABLE IF EXISTS recipe_tags;');
+    await dbRun('DROP TABLE IF EXISTS recipe_images;');
+    await dbRun('DROP TABLE IF EXISTS plan_assignments;');
+    await dbRun('DROP TABLE IF EXISTS weekly_plans;');
+    await dbRun('DROP TABLE IF EXISTS ingredients;');
+    await dbRun('DROP TABLE IF EXISTS tags;');
+    await dbRun('DROP TABLE IF EXISTS recipes;');
+    await dbRun('PRAGMA foreign_keys = ON;');
+
+    console.log('✓ Alle Tabellen erfolgreich gelöscht.');
+
+    // 2. Schema neu initialisieren
+    await initDb();
+    console.log('✓ Schema neu initialisiert und Seeding abgeschlossen.');
+
+    // 3. Uploads bereinigen
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (fs.existsSync(uploadsDir)) {
+      const files = fs.readdirSync(uploadsDir);
+      for (const file of files) {
+        if (file !== '.gitkeep') {
+          fs.unlinkSync(path.join(uploadsDir, file));
+        }
+      }
+      console.log('✓ uploads/ Ordner bereinigt.');
+    }
+
+    res.json({ message: 'Datenbank erfolgreich in den Auslieferungszustand zurückgesetzt!' });
+  } catch (error) {
+    console.error('Fehler beim Dev-Reset:', error);
+    res.status(500).json({ error: 'Fehler beim Zurücksetzen der Datenbank' });
   }
 });
 

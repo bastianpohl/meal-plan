@@ -88,6 +88,28 @@
             {{ currentDaysCount === 1 ? '1 Tag' : `${currentDaysCount} Tage` }} werden angezeigt
           </p>
         </section>
+
+        <!-- Developer Functions (Only visible in dev environment) -->
+        <section class="settings-section dev-section" v-if="isDevMode">
+          <h3 class="settings-section-title dev-title" style="color: var(--accent-primary);">
+            <ion-icon name="code-working-outline"></ion-icon>
+            Entwickler-Optionen
+          </h3>
+          <p class="settings-section-desc">Werkzeuge für die Entwicklung und lokale Tests.</p>
+          
+          <button 
+            class="btn btn-danger btn-full-width" 
+            style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15); margin-top: 12px;"
+            @click="handleDbReset" 
+            :disabled="isResetting"
+          >
+            <ion-icon name="refresh-circle-outline" style="font-size: 18px;"></ion-icon>
+            {{ isResetting ? 'Wird zurückgesetzt...' : 'Datenbank zurücksetzen' }}
+          </button>
+          <p class="settings-days-hint" style="margin-top: 6px; font-size: 11px;">
+            Setzt die gesamte lokale Datenbank (Rezepte, Pläne, Bilder) in den geseedeten Auslieferungszustand zurück.
+          </p>
+        </section>
       </div>
     </div>
   </div>
@@ -115,6 +137,8 @@ const emit = defineEmits(['close', 'update:theme', 'update:daysCount']);
 
 const currentTheme = ref(props.theme);
 const currentDaysCount = ref(props.daysCount);
+const isDevMode = ref(import.meta.env.DEV);
+const isResetting = ref(false);
 
 watch(() => props.theme, (val) => { currentTheme.value = val; });
 watch(() => props.daysCount, (val) => { currentDaysCount.value = val; });
@@ -127,5 +151,31 @@ function setTheme(theme) {
 function setDaysCount(count) {
   currentDaysCount.value = count;
   emit('update:daysCount', count);
+}
+
+async function handleDbReset() {
+  if (!confirm('Möchtest du die lokale Datenbank wirklich in den Auslieferungszustand zurücksetzen? Alle selbsterstellten Daten und Bilder gehen verloren!')) {
+    return;
+  }
+
+  isResetting.value = true;
+  try {
+    const res = await fetch('/api/dev/reset', {
+      method: 'POST'
+    });
+
+    if (res.ok) {
+      alert('Datenbank erfolgreich zurückgesetzt! Die Seite wird nun neu geladen.');
+      window.location.reload();
+    } else {
+      const data = await res.json();
+      alert('Fehler beim Zurücksetzen: ' + (data.error || 'Unbekannter Fehler'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Netzwerkfehler beim Zurücksetzen der Datenbank.');
+  } finally {
+    isResetting.value = false;
+  }
 }
 </script>
