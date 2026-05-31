@@ -69,6 +69,7 @@
               @dragleave="onAssignmentDragLeave($event)"
               @drop.stop="day.isPast ? null : onAssignmentDrop($event, index, day.formattedDateStr, 'lunch')"
               @click="$emit('recipe-click', asg.recipe, asg.id)"
+              @contextmenu.prevent="onCardContextMenu($event, asg)"
             >
               <div class="assigned-recipe-card-image">
                 <img
@@ -180,6 +181,7 @@
               @dragleave="onAssignmentDragLeave($event)"
               @drop.stop="day.isPast ? null : onAssignmentDrop($event, index, day.formattedDateStr, 'dinner')"
               @click="$emit('recipe-click', asg.recipe, asg.id)"
+              @contextmenu.prevent="onCardContextMenu($event, asg)"
             >
               <div class="assigned-recipe-card-image">
                 <img
@@ -281,7 +283,8 @@ const emit = defineEmits([
   'move-assignment',
   'assign-recipe',
   'open-slot-quick-assign',
-  'update-start-date'
+  'update-start-date',
+  'assignment-contextmenu'
 ]);
 
 
@@ -545,6 +548,10 @@ function onDrop(e, dateStr, slotType) {
       });
     }
   }
+}
+
+function onCardContextMenu(e, asg) {
+  emit('assignment-contextmenu', { event: e, assignment: asg });
 }
 
 // Drag and drop events for assigned cards (moving / sorting)

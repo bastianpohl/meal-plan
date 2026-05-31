@@ -37,6 +37,7 @@
         @assign-recipe="onRecipeDropped"
         @open-slot-quick-assign="openSlotQuickAssignDropdown"
         @update-start-date="updateStartDate"
+        @assignment-contextmenu="handleAssignmentContextMenu"
       />
     </main>
   </div>
@@ -148,6 +149,115 @@
       </div>
     </div>
   </div>
+
+  <!-- Floating Sleek Context Menu -->
+  <div
+    v-if="activeContextMenu"
+    class="custom-context-menu glass"
+    :style="{
+      position: 'absolute',
+      zIndex: 1500,
+      width: '260px',
+      maxHeight: '380px',
+      borderRadius: '16px',
+      border: '1px solid var(--border-color)',
+      padding: '14px',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+      top: `${activeContextMenu.y}px`,
+      left: `${activeContextMenu.x}px`,
+      background: 'var(--bg-glass-heavy) !important'
+    }"
+  >
+    <!-- Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:6px;">
+      <span style="font-size:12px; font-weight:700; color:var(--text-primary); text-overflow:ellipsis; white-space:nowrap; overflow:hidden; max-width:180px;" :title="activeContextMenu.recipe.title">
+        {{ activeContextMenu.recipe.title }}
+      </span>
+      <button 
+        @click="activeContextMenu = null"
+        style="background:none; border:none; padding:2px; cursor:pointer; color:var(--text-muted); display:flex; align-items:center;"
+      >
+        <ion-icon name="close-circle-outline" style="font-size:16px;"></ion-icon>
+      </button>
+    </div>
+
+    <!-- Info text / Custom badge -->
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:10px; font-weight:600; color:var(--accent-primary); display:flex; align-items:center; gap:3px;">
+        <ion-icon name="information-circle-outline" style="font-size:12px;"></ion-icon>
+        {{ contextIsCustom ? 'Zutaten angepasst' : 'Standardzutaten' }}
+      </span>
+      <button
+        v-if="contextIsCustom"
+        style="background:none; border:none; padding:2px; cursor:pointer; color:var(--system-red); font-size:10px; font-weight:700; display:flex; align-items:center; gap:2px;"
+        @click="resetContextIngredients"
+      >
+        <ion-icon name="reload-outline"></ion-icon>Reset
+      </button>
+    </div>
+
+    <!-- Loading state -->
+    <div v-if="contextLoading" style="display:flex; justify-content:center; align-items:center; padding:20px 0; color:var(--text-muted); font-size:11px; font-style:italic;">
+      Lade Zutaten...
+    </div>
+
+    <!-- Ingredients List -->
+    <div v-else style="flex-grow:1; overflow-y:auto; max-height:200px; display:flex; flex-direction:column; gap:4px; padding-right:2px;">
+      <div 
+        v-for="(ing, idx) in contextIngredients" 
+        :key="idx" 
+        style="display:flex; align-items:center; justify-content:space-between; padding:4px 6px; border-radius:8px; background:rgba(0,0,0,0.02); border-bottom: 1px dashed rgba(0,0,0,0.03);"
+      >
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:11px; margin-bottom:0; flex-grow:1; user-select:none;">
+          <input
+            type="checkbox"
+            :checked="ing.checked"
+            @change="toggleContextIngredient(idx)"
+          />
+          <span :style="{ textDecoration: ing.checked ? 'line-through' : 'none', opacity: ing.checked ? 0.6 : 1 }">{{ ing.name }}</span>
+        </label>
+        
+        <button 
+          @click="deleteContextIngredient(idx)"
+          style="background:none; border:none; padding:2px; cursor:pointer; color:var(--text-muted); display:flex; align-items:center;"
+        >
+          <ion-icon name="trash-outline" style="font-size:13px;" onmouseover="this.style.color='var(--system-red)'" onmouseout="this.style.color='var(--text-muted)'"></ion-icon>
+        </button>
+      </div>
+      <p v-if="contextIngredients.length === 0" style="color:var(--text-muted); font-style:italic; font-size:11px; text-align:center; padding:10px 0;">Keine Zutaten vorhanden.</p>
+    </div>
+
+    <!-- Add Ingredient Inline -->
+    <div style="display:flex; gap:6px; align-items:center; border-top:1px solid var(--border-color); padding-top:8px;">
+      <input 
+        type="text" 
+        v-model="contextNewIngredientName" 
+        placeholder="Zutat hinzufügen..." 
+        style="flex-grow:1; height:28px; font-size:11px; padding:4px 8px; border-radius:6px; background:var(--bg-glass-light); border:1px solid var(--border-color); color:var(--text-primary);"
+        @keydown.enter="addContextIngredient"
+      />
+      <button 
+        class="btn btn-secondary" 
+        style="height:28px; padding:0 8px; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid var(--border-color); box-shadow:none;"
+        @click="addContextIngredient"
+      >
+        <ion-icon name="add-outline" style="font-size:14px;"></ion-icon>
+      </button>
+    </div>
+
+    <!-- Quick link to full details -->
+    <button 
+      class="btn btn-secondary" 
+      style="width:100%; height:28px; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:4px; border-radius:6px; border:1px solid var(--border-color); box-shadow:none; margin-top:2px;"
+      @click="openRecipeDetails(activeContextMenu.recipe, activeContextMenu.id); activeContextMenu = null;"
+    >
+      <ion-icon name="open-outline" style="font-size:13px;"></ion-icon>
+      Vollständige Details öffnen
+    </button>
+  </div>
 </template>
 
 <script setup>
@@ -200,6 +310,11 @@ const plannerRef = ref(null);
 // FLOATING POPUPS STATE
 const quickAssignSlot = ref(null); // { dayKey, slotKey, rect }
 const quickPlanRecipe = ref(null); // { recipe, rect }
+const activeContextMenu = ref(null); // { id, recipe, x, y }
+const contextIngredients = ref([]);
+const contextIsCustom = ref(false);
+const contextLoading = ref(false);
+const contextNewIngredientName = ref('');
 
 // STYLES FOR FLOATING POPUPS
 const quickAssignSlotStyle = computed(() => {
@@ -1001,6 +1116,102 @@ function closeRecipeDetails() {
   detailAssignmentId.value = null;
 }
 
+// Rechtsklick-Kontextmenü Handler & Methoden
+async function handleAssignmentContextMenu({ event, assignment }) {
+  // Schließe andere Popups
+  quickAssignSlot.value = null;
+  quickPlanRecipe.value = null;
+
+  // Berechne optimale Position (mit Randschutz, damit es nicht aus dem Viewport ragt)
+  const menuWidth = 260;
+  const menuHeight = 360;
+  
+  let x = event.clientX;
+  let y = event.clientY;
+
+  if (x + menuWidth > window.innerWidth) {
+    x = window.innerWidth - menuWidth - 10;
+  }
+  if (y + menuHeight > window.innerHeight) {
+    y = window.innerHeight - menuHeight - 10;
+  }
+
+  // Setze den Kontext
+  activeContextMenu.value = {
+    id: assignment.id,
+    recipe: assignment.recipe,
+    x: x + window.scrollX,
+    y: y + window.scrollY
+  };
+
+  await loadContextIngredients();
+}
+
+async function loadContextIngredients() {
+  if (!activeContextMenu.value) return;
+  contextLoading.value = true;
+  try {
+    const data = await apiFetch(`/api/assignments/${activeContextMenu.value.id}/ingredients`);
+    if (data) {
+      contextIngredients.value = data.ingredients || [];
+      contextIsCustom.value = data.isCustom || false;
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Kontext-Zutaten:', err);
+  } finally {
+    contextLoading.value = false;
+  }
+}
+
+async function saveContextIngredients(updatedList) {
+  if (!activeContextMenu.value) return;
+  try {
+    const data = await apiFetch(`/api/assignments/${activeContextMenu.value.id}/ingredients`, {
+      method: 'PUT',
+      body: { ingredients: updatedList }
+    });
+    if (data) {
+      contextIngredients.value = data.ingredients || [];
+      contextIsCustom.value = data.isCustom || false;
+    }
+  } catch (err) {
+    console.error('Fehler beim Speichern der Kontext-Zutaten:', err);
+  }
+}
+
+function toggleContextIngredient(idx) {
+  const list = [...contextIngredients.value];
+  list[idx].checked = !list[idx].checked;
+  saveContextIngredients(list);
+}
+
+function addContextIngredient() {
+  const name = contextNewIngredientName.value.trim();
+  if (!name) return;
+  const list = [...contextIngredients.value];
+  list.push({ name, checked: false });
+  saveContextIngredients(list);
+  contextNewIngredientName.value = '';
+}
+
+function deleteContextIngredient(idx) {
+  const list = [...contextIngredients.value];
+  list.splice(idx, 1);
+  saveContextIngredients(list);
+}
+
+async function resetContextIngredients() {
+  if (!activeContextMenu.value || !confirm('Möchtest du die Zutaten wirklich auf den Standard des Originalrezepts zurücksetzen? Alle individuellen Änderungen an diesem Tag gehen verloren!')) return;
+  try {
+    await apiFetch(`/api/assignments/${activeContextMenu.value.id}/ingredients`, {
+      method: 'DELETE'
+    });
+    await loadContextIngredients();
+  } catch (err) {
+    console.error('Fehler beim Zurücksetzen der Kontext-Zutaten:', err);
+  }
+}
+
 // Form save event handlers
 function onRecipeUpdated(updatedRecipe) {
   detailRecipe.value = updatedRecipe;
@@ -1101,10 +1312,22 @@ function handleGlobalClick(e) {
       quickPlanRecipe.value = null;
     }
   }
+  if (activeContextMenu.value) {
+    if (!e.target.closest('.custom-context-menu')) {
+      activeContextMenu.value = null;
+    }
+  }
 }
 
 function handleGlobalKeydown(e) {
-  // Ignoriere Tastaturkürzel, wenn der Benutzer in einem Eingabefeld tippt
+  // Schließe das Kontextmenü mit Escape, selbst wenn ein Eingabefeld fokussiert ist
+  if (e.key === 'Escape' && activeContextMenu.value) {
+    activeContextMenu.value = null;
+    e.preventDefault();
+    return;
+  }
+
+  // Ignoriere andere Tastaturkürzel, wenn der Benutzer in einem Eingabefeld tippt
   if (
     document.activeElement &&
     (document.activeElement.tagName === 'INPUT' ||
