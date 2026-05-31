@@ -377,56 +377,231 @@ body.dark-theme .search-trigger-btn {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-/* Horizontal recipe cards swiper inside sidebar */
-.carousel-outer-wrapper {
+/* Alphabetical Recipe List in Sidebar */
+.sidebar-recipe-list-wrapper {
   flex: 1;
   overflow: hidden;
   position: relative;
   display: flex;
-  align-items: center;
-  padding: 24px;
 }
 
-.recipe-carousel {
+.sidebar-recipe-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 12px 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.sidebar-recipe-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-recipe-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.sidebar-list-placeholder {
   display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sidebar-list-placeholder ion-icon {
+  font-size: 32px;
+}
+
+.sidebar-list-placeholder p {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Letter section header */
+.sidebar-letter-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  padding: 10px 4px 4px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.5px;
+}
+
+.glass .sidebar-letter-header {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Recipe row item (Polaroid-inspired compact) */
+.sidebar-recipe-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+  position: relative;
+}
+
+.sidebar-recipe-item:hover {
+  background: var(--bg-tertiary);
+  transform: translateX(2px);
+}
+
+.sidebar-recipe-item.dragging {
+  opacity: 0.35;
+  transform: scale(0.96);
+}
+
+/* Recipe thumbnail */
+.sidebar-recipe-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-recipe-thumb img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sidebar-recipe-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
   align-items: center;
-  scrollbar-width: none;
+  justify-content: center;
+  color: var(--text-muted);
 }
 
-.recipe-carousel::-webkit-scrollbar {
-  display: none;
+.sidebar-recipe-thumb-placeholder ion-icon {
+  font-size: 20px;
 }
 
-.carousel-control-btn {
-  position: absolute;
-  z-index: 10;
-  background: var(--bg-glass-heavy);
-  border: 1px solid var(--border-color);
+/* Recipe info text */
+.sidebar-recipe-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-recipe-name {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-primary);
-  width: 36px;
-  height: 36px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-recipe-category {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Quick-plan button (sidebar list version) */
+.btn-quick-plan-sidebar {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-recipe-item:hover .btn-quick-plan-sidebar {
+  opacity: 1;
+}
+
+.btn-quick-plan-sidebar:hover {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+.btn-quick-plan-sidebar ion-icon {
+  font-size: 15px;
+}
+
+/* Vertical Letter Navigation Bar */
+.sidebar-letter-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 3px;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.letter-nav-item {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 16px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  box-shadow: var(--card-shadow);
-  transition: var(--transition-bounce);
+  border-radius: 3px;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  opacity: 0.35;
 }
 
-.carousel-control-btn:hover {
-  transform: scale(1.1);
-  background: var(--bg-secondary);
+.letter-nav-item.active {
+  color: var(--text-secondary);
+  opacity: 1;
+  cursor: pointer;
 }
 
-.carousel-control-btn.prev { left: 8px; }
-.carousel-control-btn.next { right: 8px; }
+.letter-nav-item.active:hover {
+  color: var(--accent-primary);
+  background: var(--bg-tertiary);
+  transform: scale(1.25);
+}
+
+.letter-nav-item.current {
+  color: #fff;
+  background: var(--accent-primary);
+  border-radius: 4px;
+  transform: scale(1.15);
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(85, 175, 200, 0.35);
+}
 
 /* RECIPE CARDS */
 .recipe-card {
