@@ -42,27 +42,14 @@
           <span>Heute</span>
         </button>
 
-        <div class="days-select-wrapper">
-          <ion-icon name="options-outline" class="select-icon"></ion-icon>
-          <select
-            :value="visibleDaysCount"
-            @change="$emit('change-days-count', parseInt($event.target.value))"
-          >
-            <option v-for="n in 10" :key="n" :value="n">
-              {{ n }} {{ n === 1 ? 'Tag' : 'Tage' }}
-            </option>
-          </select>
-        </div>
-        
         <button class="btn-nav" title="1 Tag vorwärts" @click="$emit('slide-days', 1)">
           <ion-icon name="chevron-forward-outline"></ion-icon>
         </button>
       </div>
 
-      <!-- Theme toggle -->
-      <button class="theme-toggle-btn" aria-label="Design umschalten" @click="$emit('toggle-theme')">
-        <ion-icon name="sunny-outline" class="sun-icon"></ion-icon>
-        <ion-icon name="moon-outline" class="moon-icon"></ion-icon>
+      <!-- Settings gear button -->
+      <button class="btn-header-action btn-settings" title="Einstellungen" @click="$emit('open-settings')">
+        <ion-icon name="settings-outline"></ion-icon>
       </button>
     </div>
   </header>
@@ -79,10 +66,6 @@ const props = defineProps({
   isTodayInViewport: {
     type: Boolean,
     required: true
-  },
-  visibleDaysCount: {
-    type: Number,
-    required: true
   }
 });
 
@@ -91,8 +74,7 @@ defineEmits([
   'open-search',
   'slide-days',
   'go-today',
-  'change-days-count',
-  'toggle-theme'
+  'open-settings'
 ]);
 
 const isMac = ref(true);

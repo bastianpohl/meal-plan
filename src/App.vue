@@ -19,13 +19,11 @@
       <Header
         :visibleDays="visibleDays"
         :isTodayInViewport="isTodayInViewport"
-        :visibleDaysCount="rollingDaysCount"
         @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
         @open-search="openSearchOverlay"
         @slide-days="slideDays"
         @go-today="goToday"
-        @change-days-count="changeDaysCount"
-        @toggle-theme="toggleTheme"
+        @open-settings="isSettingsOpen = true"
       />
 
       <!-- Spalten Grid -->
@@ -86,6 +84,16 @@
     @recipe-click="openRecipeDetailsFromSearch"
     @tag-click="startTagSearch"
     @drag-start="isSidebarOpen = false"
+  />
+
+  <!-- Settings Modal -->
+  <SettingsModal
+    :isOpen="isSettingsOpen"
+    :theme="themePreference"
+    :daysCount="rollingDaysCount"
+    @close="isSettingsOpen = false"
+    @update:theme="applyTheme"
+    @update:daysCount="changeDaysCount"
   />
 
   <!-- FLOATING QUICK ASSIGN DROPDOWNS -->
@@ -151,6 +159,7 @@ import RecipeFormModal from './components/RecipeFormModal.vue';
 import RecipeDetailModal from './components/RecipeDetailModal.vue';
 import PlanCreateModal from './components/PlanCreateModal.vue';
 import SearchOverlay from './components/SearchOverlay.vue';
+import SettingsModal from './components/SettingsModal.vue';
 
 const EnglishDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -171,6 +180,8 @@ const searchQuery = ref('');
 
 // Rolling calendar timeline state
 const rollingDaysCount = ref(parseInt(localStorage.getItem('rolling_days_count') || '7'));
+const isSettingsOpen = ref(false);
+const themePreference = ref(localStorage.getItem('theme_preference') || 'system');
 const rollingStartDate = ref(getMidnightDate());
 const weeklyPlansCache = ref({});
 
@@ -284,15 +295,18 @@ onUnmounted(() => {
   window.removeEventListener('click', handleGlobalClick);
   window.removeEventListener('keydown', handleGlobalKeydown);
   stopStatusRefresh();
+  if (systemThemeMediaQuery) {
+    systemThemeMediaQuery.removeEventListener('change', onSystemThemeChange);
+  }
 });
 
 // FUNCTIONS & LOGIC
 
-// Theme management
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme');
-  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+// Theme management (system / light / dark)
+let systemThemeMediaQuery = null;
+
+function applyThemeToDOM(mode) {
+  if (mode === 'dark') {
     document.body.classList.add('dark-theme');
     document.body.classList.remove('light-theme');
   } else {
@@ -301,15 +315,41 @@ function initTheme() {
   }
 }
 
-function toggleTheme() {
-  if (document.body.classList.contains('dark-theme')) {
-    document.body.classList.remove('dark-theme');
-    document.body.classList.add('light-theme');
-    localStorage.setItem('theme', 'light');
+function onSystemThemeChange(e) {
+  if (themePreference.value === 'system') {
+    applyThemeToDOM(e.matches ? 'dark' : 'light');
+  }
+}
+
+function initTheme() {
+  // Migrate old 'theme' key to new 'theme_preference' if needed
+  const oldTheme = localStorage.getItem('theme');
+  if (oldTheme && !localStorage.getItem('theme_preference')) {
+    localStorage.setItem('theme_preference', oldTheme);
+    localStorage.removeItem('theme');
+    themePreference.value = oldTheme;
+  }
+
+  systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  systemThemeMediaQuery.addEventListener('change', onSystemThemeChange);
+
+  const pref = themePreference.value;
+  if (pref === 'system') {
+    applyThemeToDOM(systemThemeMediaQuery.matches ? 'dark' : 'light');
   } else {
-    document.body.classList.add('dark-theme');
-    document.body.classList.remove('light-theme');
-    localStorage.setItem('theme', 'dark');
+    applyThemeToDOM(pref);
+  }
+}
+
+function applyTheme(newPref) {
+  themePreference.value = newPref;
+  localStorage.setItem('theme_preference', newPref);
+
+  if (newPref === 'system') {
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyThemeToDOM(systemPrefersDark ? 'dark' : 'light');
+  } else {
+    applyThemeToDOM(newPref);
   }
 }
 
