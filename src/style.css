@@ -152,6 +152,7 @@ ion-icon {
   display: flex;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* Dynamic Viewport Height to prevent iOS Safari Address Bar overlapping */
   position: relative;
   overflow: hidden;
 }
@@ -160,6 +161,7 @@ ion-icon {
 .recipe-sidebar {
   width: 330px;
   height: 100%;
+  height: 100dvh; /* Match dynamic viewport height */
   position: absolute;
   left: 0;
   top: 0;
@@ -1030,7 +1032,7 @@ body.dark-theme .search-trigger-btn {
   /* Neues Rezept erfassen Button schwebend am unteren Rand positionieren für Daumenerreichbarkeit */
   .sidebar-actions {
     position: absolute;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px)); /* Erhöhter Abstand, um iOS Safari Tab-Bar perfekt zu meiden */
     left: 16px;
     right: 44px; /* Ausreichend Platz für das vergrößerte Alphabet rechts lassen */
     padding: 0 !important;
@@ -1047,7 +1049,7 @@ body.dark-theme .search-trigger-btn {
 
   /* Zusätzliches Padding für die Rezeptliste, damit kein Rezept hinter dem schwebenden Button verschwindet */
   .sidebar-recipe-list {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important; /* Entsprechend angepasstes Padding */
   }
 }
 
