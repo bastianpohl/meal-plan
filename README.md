@@ -53,24 +53,57 @@ cd meal-plan
 npm install
 ```
 
-### 2. Datenbank mit Demodaten initialisieren (Seeding)
-```bash
-node seed.js
-```
+### 2. Automatisierte Initialisierung
+> [!NOTE]  
+> Ein manuelles Seeding ist bei der ersten Installation **nicht mehr zwingend notwendig**! Startet man das Backend (`npm run start` oder `npm run prod:start`) und die SQLite-Datei `database.sqlite` ist noch nicht vorhanden, legt das System alle Tabellenschemata automatisch im Hintergrund an und befüllt sie direkt mit den vier köstlichen Beispielrezepten.
 
-### 3. Server starten (Frontend & Backend parallel)
+---
 
-**Backend-Server (Express API & SQLite auf Port 3000):**
-```bash
-npm run start
-```
+## 💻 Entwicklung (Development Mode)
 
-**Frontend-Server (Vite Dev Server auf Port 5173):**
-```bash
-npm run dev
-```
+Im Entwicklungsmodus betreibt man zwei Server parallel, um von Vite's Hot Module Replacement (HMR) zu profitieren:
 
-*Der Vite-Entwicklungsserver proxy-t alle API- und Upload-Anfragen automatisch an den Port 3000.*
+1. **Express API Server starten (Port 3000)**:
+   ```bash
+   npm run start:dev
+   ```
+2. **Vite Frontend Server starten (Port 5173)**:
+   ```bash
+   npm run dev
+   ```
+*Der Vite-Entwicklungsserver proxy-t alle API- und Upload-Anfragen automatisch im Hintergrund an den Port 3000.*
+
+---
+
+## 🌐 Produktion & Rollout (Production Mode)
+
+Im Produktionsmodus benötigt man **nur noch einen einzigen laufenden Node-Prozess**, der sowohl die API als auch das statisch kompilierte Frontend ausliefert:
+
+1. **Frontend für Produktion kompilieren**:
+   ```bash
+   npm run build
+   ```
+   *Dies erzeugt optimierte statische HTML, CSS und JS-Dateien im Ordner `/dist`.*
+2. **Server im Produktionsmodus starten (Port 3000)**:
+   ```bash
+   npm run prod:start
+   ```
+   *Express liefert nun unter `http://localhost:3000` sowohl das Frontend als auch die REST-API hocheffizient und ohne Proxy-Verzögerungen aus.*
+
+---
+
+## 🔄 Zurücksetzen der Datenbank (Reset Process)
+
+Um das System komfortabel und sauber in den Auslieferungszustand zurückzusetzen, stehen zwei Wege zur Verfügung:
+
+1. **Über die Kommandozeile (CLI)**:
+   ```bash
+   npm run db:reset
+   ```
+   *Löscht `database.sqlite`, leert den `uploads/`-Ordner und initialisiert das Schema sowie die Standard-Seeddaten von Grund auf neu.*
+2. **Live über das Einstellungsmenü (nur Dev-Modus)**:
+   * Klickt man im Einstellungs-Zahnrad der App ganz unten auf den roten Button **"Datenbank zurücksetzen"**, wird ein `POST`-Request an `/api/dev/reset` abgesetzt.
+   * **Produktions-Absicherung**: In der Produktionsumgebung (`NODE_ENV=production`) blockiert das Backend diesen Request sofort mit einem **HTTP 403 Forbidden**. Zudem blendet Vite den Entwicklerbereich im produktiven Build über eine `import.meta.env.DEV` Compile-Time-Prüfung vollständig und spurenlos aus.
 
 ---
 
