@@ -1096,6 +1096,36 @@ app.post('/api/settings/bring/test', async (req, res) => {
   }
 });
 
+// GET active Bring! list items
+app.get('/api/settings/bring/items', async (req, res) => {
+  try {
+    const email = await getSetting('bring_email');
+    const password = await getSetting('bring_password');
+    const listUuid = await getSetting('bring_list_uuid');
+
+    if (!email || !password || !listUuid) {
+      return res.json({ configured: false, items: [] });
+    }
+
+    const bring = new BringApi({ mail: email, password: password });
+    await bring.login();
+    const listData = await bring.getItems(listUuid);
+
+    const activeItems = (listData.purchase || []).map(item => ({
+      name: item.name,
+      specification: item.specification || ''
+    }));
+
+    res.json({
+      configured: true,
+      items: activeItems
+    });
+  } catch (error) {
+    console.error('Bring GetItems Fehler:', error);
+    res.status(500).json({ error: `Fehler beim Laden der Bring!-Einträge: ${error.message || error}` });
+  }
+});
+
 // POST Export shopping list items to Bring!
 app.post('/api/shopping-list/export', async (req, res) => {
   try {
@@ -1115,9 +1145,15 @@ app.post('/api/shopping-list/export', async (req, res) => {
     const bring = new BringApi({ mail: email, password: password });
     await bring.login();
 
-    // Export each item
+    // Export each item, respecting specification details
     for (const ing of ingredients) {
-      await bring.saveItem(listUuid, ing, '');
+      if (typeof ing === 'object' && ing !== null) {
+        const name = ing.name;
+        const spec = ing.specification || '';
+        await bring.saveItem(listUuid, name, spec);
+      } else {
+        await bring.saveItem(listUuid, ing, '');
+      }
     }
 
     res.json({ success: true, message: `${ingredients.length} Zutat(en) erfolgreich an Bring! übertragen.` });

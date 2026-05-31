@@ -74,7 +74,7 @@
           <div v-else class="shopping-ingredients-list-container">
             <ul class="detail-ingredients-list" style="margin: 0; padding: 0;">
               <li v-for="(ing, idx) in ingredients" :key="idx" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border-color);">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex-grow: 1; margin: 0;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex-grow: 1; margin: 0; min-width: 0;">
                   <input
                     type="checkbox"
                     :checked="checkedItems.includes(ing.name.toLowerCase())"
@@ -83,7 +83,10 @@
                   <span :style="{ 
                     textDecoration: checkedItems.includes(ing.name.toLowerCase()) ? 'line-through' : 'none', 
                     opacity: checkedItems.includes(ing.name.toLowerCase()) ? 0.5 : 1,
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }">
                     {{ ing.name }}
                     <span v-if="ing.count > 1" style="color: var(--accent-primary); font-weight: 600; margin-left: 4px;">
@@ -91,6 +94,43 @@
                     </span>
                   </span>
                 </label>
+
+                <!-- Bring! Actions & Prefs -->
+                <div v-if="isBringConfigured" style="display: flex; align-items: center; flex-shrink: 0; margin-left: 10px;">
+                  <!-- Quantity Preference Dropdown -->
+                  <select 
+                    v-if="ing.count > 1"
+                    :value="getQtyPreference(ing.name)" 
+                    @change="setQtyPreference(ing.name, $event.target.value)"
+                    class="qty-select"
+                  >
+                    <option value="yes">mit Menge</option>
+                    <option value="no">ohne Menge</option>
+                  </select>
+
+                  <!-- Status Badge or Action Button -->
+                  <div style="display: flex; align-items: center; width: 95px; justify-content: flex-end;">
+                    <span v-if="isOnBringList(ing.name)" class="bring-badge bring-active" title="Bereits auf Bring!">
+                      <ion-icon name="checkmark-done-outline" style="font-size: 14px;"></ion-icon>
+                      Gelistet
+                    </span>
+                    
+                    <button 
+                      v-else
+                      class="bring-badge bring-inactive" 
+                      title="Zu Bring! hinzufügen" 
+                      @click="exportSingleToBring(ing)"
+                      :disabled="exportingIngs[ing.name.toLowerCase()]"
+                    >
+                      <ion-icon 
+                        :name="exportingIngs[ing.name.toLowerCase()] ? 'sync-outline' : 'add-outline'" 
+                        :class="{ 'spin': exportingIngs[ing.name.toLowerCase()] }"
+                        style="font-size: 14px;"
+                      ></ion-icon>
+                      Bring!
+                    </button>
+                  </div>
+                </div>
               </li>
             </ul>
           </div>
@@ -125,6 +165,12 @@ const exporting = ref(false);
 const exportError = ref('');
 const exportSuccess = ref('');
 
+// Bring! detailed list integration
+const bringActiveItems = ref([]);
+const loadingBringItems = ref(false);
+const qtyPreferences = ref({});
+const exportingIngs = ref({});
+
 async function fetchShoppingList() {
   if (!props.isOpen || !props.todayStr) return;
   loading.value = true;
@@ -137,6 +183,71 @@ async function fetchShoppingList() {
     console.error('Fehler beim Laden der Einkaufsliste:', err);
   } finally {
     loading.value = false;
+  }
+}
+
+async function fetchBringItems() {
+  if (!isBringConfigured.value) return;
+  loadingBringItems.value = true;
+  try {
+    const res = await fetch('/api/settings/bring/items');
+    if (res.ok) {
+      const data = await res.json();
+      bringActiveItems.value = data.items || [];
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Bring-Elemente:', err);
+  } finally {
+    loadingBringItems.value = false;
+  }
+}
+
+function isOnBringList(name) {
+  const lower = name.toLowerCase().trim();
+  return bringActiveItems.value.some(item => item.name.toLowerCase().trim() === lower);
+}
+
+function getQtyPreference(name) {
+  const lower = name.toLowerCase();
+  if (qtyPreferences.value[lower] !== undefined) {
+    return qtyPreferences.value[lower];
+  }
+  const saved = localStorage.getItem(`bring_qty_pref_${lower}`);
+  const pref = saved === 'no' ? 'no' : 'yes';
+  qtyPreferences.value[lower] = pref;
+  return pref;
+}
+
+function setQtyPreference(name, val) {
+  const lower = name.toLowerCase();
+  qtyPreferences.value[lower] = val;
+  localStorage.setItem(`bring_qty_pref_${lower}`, val);
+}
+
+async function exportSingleToBring(ing) {
+  const lower = ing.name.toLowerCase();
+  exportingIngs.value[lower] = true;
+  
+  const pref = getQtyPreference(ing.name);
+  const spec = (pref === 'yes' && ing.count > 1) ? `${ing.count}` : '';
+
+  try {
+    const res = await fetch('/api/shopping-list/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ingredients: [{ name: ing.name, specification: spec }]
+      })
+    });
+
+    if (res.ok) {
+      // Add locally so green checkmark renders instantly
+      bringActiveItems.value.push({ name: ing.name, specification: spec });
+    }
+  } catch (err) {
+    console.error('Fehler beim Export der Zutat:', err);
+  } finally {
+    exportingIngs.value[lower] = false;
   }
 }
 
@@ -161,6 +272,7 @@ watch(() => props.isOpen, (isOpenVal) => {
     checkedItems.value = [];
     exportError.value = '';
     exportSuccess.value = '';
+    bringActiveItems.value = [];
     checkBringConfig();
     fetchShoppingList();
   }
@@ -172,6 +284,9 @@ async function checkBringConfig() {
     if (res.ok) {
       const data = await res.json();
       isBringConfigured.value = !!(data.email && data.listUuid);
+      if (isBringConfigured.value) {
+        fetchBringItems();
+      }
     }
   } catch (err) {
     console.error('Fehler beim Prüfen der Bring-Konfiguration:', err);
@@ -192,17 +307,30 @@ async function exportToBring() {
 
   exporting.value = true;
   try {
+    const itemsToExport = uncheckedIngs.map(ing => {
+      const pref = getQtyPreference(ing.name);
+      const spec = (pref === 'yes' && ing.count > 1) ? `${ing.count}` : '';
+      return { name: ing.name, specification: spec };
+    });
+
     const res = await fetch('/api/shopping-list/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ingredients: uncheckedIngs.map(ing => ing.name)
+        ingredients: itemsToExport
       })
     });
 
     const data = await res.json();
     if (res.ok) {
       exportSuccess.value = data.message || 'Erfolgreich übertragen!';
+      
+      // Update local active items
+      for (const item of itemsToExport) {
+        if (!isOnBringList(item.name)) {
+          bringActiveItems.value.push(item);
+        }
+      }
     } else {
       exportError.value = data.error || 'Fehler beim Export.';
     }
@@ -224,7 +352,7 @@ watch(() => props.todayStr, () => {
 
 <style scoped>
 .shopping-list-panel {
-  width: 500px !important;
+  width: 540px !important;
 }
 
 .loading-spinner {
@@ -235,6 +363,60 @@ watch(() => props.todayStr, () => {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto;
+}
+
+.qty-select {
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  outline: none;
+  cursor: pointer;
+  margin-right: 4px;
+  transition: all 0.2s ease;
+}
+
+.qty-select:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.bring-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  transition: all 0.2s ease;
+}
+
+.bring-badge.bring-active {
+  background: rgba(46, 196, 182, 0.12);
+  color: #2ec4b6;
+  border: 1px solid rgba(46, 196, 182, 0.25);
+}
+
+.bring-badge.bring-inactive {
+  background: rgba(230, 57, 70, 0.08);
+  color: #E63946;
+  border: 1px solid rgba(230, 57, 70, 0.15);
+  cursor: pointer;
+}
+
+.bring-badge.bring-inactive:hover {
+  background: #E63946;
+  color: #ffffff;
+  border-color: #E63946;
+  box-shadow: 0 2px 6px rgba(230, 57, 70, 0.25);
+}
+
+.bring-badge:disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 @keyframes spin {
