@@ -1026,6 +1026,29 @@ body.dark-theme .search-trigger-btn {
   .weekly-planner-viewport {
     padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
   }
+
+  /* Neues Rezept erfassen Button schwebend am unteren Rand positionieren für Daumenerreichbarkeit */
+  .sidebar-actions {
+    position: absolute;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 16px;
+    right: 44px; /* Ausreichend Platz für das vergrößerte Alphabet rechts lassen */
+    padding: 0 !important;
+    z-index: 20;
+  }
+
+  .sidebar-actions .btn {
+    box-shadow: 0 8px 24px rgba(85, 175, 200, 0.25);
+    border: 1px solid rgba(85, 175, 200, 0.4);
+    height: 48px; /* Optimales Daumen-Target */
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  /* Zusätzliches Padding für die Rezeptliste, damit kein Rezept hinter dem schwebenden Button verschwindet */
+  .sidebar-recipe-list {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important;
+  }
 }
 
 /* Wochentag Spalte */
