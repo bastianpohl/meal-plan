@@ -42,7 +42,6 @@ async function seedData() {
       {
         title: 'Cremige Spaghetti Carbonara',
         duration: 20,
-        category: 'Pasta',
         notes: 'Original römisches Rezept mit Guanciale (oder Pancetta), Eigelb und feinstem Pecorino Romano. Keine Sahne verwenden!',
         tags: ['schnell', 'italienisch', 'klassiker'],
         ingredients: ['Spaghetti', 'Guanciale', 'Pecorino Romano', 'Eigelb', 'Schwarzer Pfeffer']
@@ -50,7 +49,6 @@ async function seedData() {
       {
         title: 'Lachs-Spinat-Pfanne mit Zitrone',
         duration: 25,
-        category: 'Fisch',
         notes: 'Eine leckere und cremige Pfanne mit frischem Lachsfilet und Spinat in einer leichten Weißwein-Sahne-Sauce.',
         tags: ['lowcarb', 'gesund', 'schnell'],
         ingredients: ['Lachsfilet', 'Blattspinat', 'Sahne', 'Weißwein', 'Knoblauch', 'Zitrone']
@@ -58,7 +56,6 @@ async function seedData() {
       {
         title: 'Zarter Rinderbraten in Rotweinsauce',
         duration: 120,
-        category: 'Fleisch',
         notes: 'Langsam geschmorter Rinderbraten mit Wurzelgemüse und einer kräftigen Rotweinsauce. Perfekt für das Sonntagsessen.',
         tags: ['sonntag', 'klassiker', 'deftig'],
         ingredients: ['Rindfleisch (Schmorbraten)', 'Karotten', 'Sellerie', 'Zwiebeln', 'Rotwein', 'Rinderfond', 'Lorbeerblätter']
@@ -66,7 +63,6 @@ async function seedData() {
       {
         title: 'Frischer Avocado-Mango Salat',
         duration: 15,
-        category: 'Veggie',
         notes: 'Ein fruchtig-frischer Sommersalat mit reifer Mango, cremiger Avocado und knackigem Rucola, verfeinert mit Limetten-Dressing.',
         tags: ['frisch', 'sommer', 'vegan', 'veggie'],
         ingredients: ['Avocado', 'Mango', 'Rucola', 'Limette', 'Olivenöl', 'Koriander', 'Kirschtomaten']
@@ -83,8 +79,8 @@ async function seedData() {
 
       // Insert base recipe
       const res = await dbRun(
-        'INSERT INTO recipes (title, duration, category, notes) VALUES (?, ?, ?, ?)',
-        [r.title, r.duration, r.category, r.notes]
+        'INSERT INTO recipes (title, duration, notes) VALUES (?, ?, ?)',
+        [r.title, r.duration, r.notes]
       );
       const recipeId = res.lastID;
 

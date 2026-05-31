@@ -19,7 +19,7 @@
         draggable="false"
       />
       <div v-else class="recipe-card-img-placeholder" style="height: 100%; display: flex; align-items: center; justify-content: center;">
-        <ion-icon :name="getCategoryIcon(recipe.category)" style="font-size: 48px;"></ion-icon>
+        <ion-icon name="restaurant-outline" style="font-size: 48px;"></ion-icon>
       </div>
     </div>
     
@@ -72,7 +72,7 @@
         loading="lazy"
       />
       <div v-else class="recipe-card-img-placeholder">
-        <ion-icon :name="getCategoryIcon(recipe.category)"></ion-icon>
+        <ion-icon name="restaurant-outline"></ion-icon>
       </div>
       
       <!-- Duration Badge -->
@@ -98,9 +98,7 @@
       @mouseenter="isDraggable = false"
       @mouseleave="isDraggable = true"
     >
-      <div class="recipe-card-header-row">
-        <span class="recipe-card-category-badge">{{ recipe.category || 'Allgemein' }}</span>
-      </div>
+
       <h4 class="recipe-card-title">{{ recipe.title }}</h4>
       
       <!-- Tags List -->
@@ -141,18 +139,7 @@ const emit = defineEmits(['click', 'tag-click', 'quick-plan', 'drag-start', 'dra
 
 const quickPlanBtn = ref(null);
 
-const CATEGORY_ICONS = {
-  'Pasta': 'pizza-outline',
-  'Veggie': 'leaf-outline',
-  'Fleisch': 'restaurant-outline',
-  'Fisch': 'fish-outline',
-  'Dessert': 'ice-cream-outline',
-  'Anderes': 'fast-food-outline'
-};
 
-function getCategoryIcon(cat) {
-  return CATEGORY_ICONS[cat] || 'restaurant-outline';
-}
 
 const parsedTags = computed(() => {
   if (!props.recipe.tags) return [];

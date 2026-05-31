@@ -79,7 +79,6 @@
         <!-- Text details section (Right side) -->
         <div class="recipe-detail-info">
           <div class="detail-header-group">
-            <span class="detail-category-badge">{{ localRecipe.category || 'Allgemein' }}</span>
             <h2>{{ localRecipe.title }}</h2>
             <div class="detail-meta-row" v-if="localRecipe.duration">
               <span class="detail-meta-item">

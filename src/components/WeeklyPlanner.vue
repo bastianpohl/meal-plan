@@ -78,7 +78,7 @@
                   draggable="false"
                 />
                 <div v-else class="assigned-recipe-thumb-placeholder">
-                  <ion-icon :name="getCategoryIcon(asg.recipe.category)"></ion-icon>
+                  <ion-icon name="restaurant-outline"></ion-icon>
                 </div>
               </div>
               <div class="assigned-recipe-card-content">
@@ -189,7 +189,7 @@
                   draggable="false"
                 />
                 <div v-else class="assigned-recipe-thumb-placeholder">
-                  <ion-icon :name="getCategoryIcon(asg.recipe.category)"></ion-icon>
+                  <ion-icon name="restaurant-outline"></ion-icon>
                 </div>
               </div>
               <div class="assigned-recipe-card-content">
@@ -284,14 +284,7 @@ const emit = defineEmits([
   'update-start-date'
 ]);
 
-const CATEGORY_ICONS = {
-  'Pasta': 'pizza-outline',
-  'Veggie': 'leaf-outline',
-  'Fleisch': 'restaurant-outline',
-  'Fisch': 'fish-outline',
-  'Dessert': 'ice-cream-outline',
-  'Anderes': 'fast-food-outline'
-};
+
 
 const dragOverSlot = ref(null);
 const isTransitioningFromSwipe = ref(false);
@@ -492,9 +485,7 @@ defineExpose({
   triggerSlide
 });
 
-function getCategoryIcon(cat) {
-  return CATEGORY_ICONS[cat] || 'restaurant-outline';
-}
+
 
 function getAssignments(dateStr, slotType) {
   const current = props.assignments[dateStr];

@@ -77,7 +77,7 @@
                     draggable="false"
                   />
                   <div v-else class="sidebar-recipe-thumb-placeholder">
-                    <ion-icon :name="getCategoryIcon(recipe.category)"></ion-icon>
+                    <ion-icon name="restaurant-outline"></ion-icon>
                   </div>
                 </div>
                 <div class="sidebar-recipe-info">
@@ -146,19 +146,6 @@ const emit = defineEmits([
 const listContainer = ref(null);
 const letterRefs = ref({});
 const activeLetter = ref('');
-
-const CATEGORY_ICONS = {
-  'Pasta': 'pizza-outline',
-  'Veggie': 'leaf-outline',
-  'Fleisch': 'restaurant-outline',
-  'Fisch': 'fish-outline',
-  'Dessert': 'ice-cream-outline',
-  'Anderes': 'fast-food-outline'
-};
-
-function getCategoryIcon(cat) {
-  return CATEGORY_ICONS[cat] || 'restaurant-outline';
-}
 
 const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 

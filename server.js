@@ -98,10 +98,17 @@ async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       duration INTEGER,
-      category TEXT,
       notes TEXT
     );
   `);
+
+  // Auto-migration to remove category column from older databases
+  try {
+    await dbRun('ALTER TABLE recipes DROP COLUMN category;');
+    console.log('Datenbank-Migration: Spalte "category" wurde erfolgreich aus Tabelle "recipes" entfernt.');
+  } catch (err) {
+    // Fehler wird ignoriert, wenn die Spalte bereits nicht mehr existiert
+  }
 
   // Images Table
   await dbRun(`
@@ -199,7 +206,6 @@ async function seedDatabaseIfEmpty() {
       {
         title: 'Cremige Spaghetti Carbonara',
         duration: 20,
-        category: 'Pasta',
         notes: 'Original römisches Rezept mit Guanciale (oder Pancetta), Eigelb und feinstem Pecorino Romano. Keine Sahne verwenden!',
         tags: ['schnell', 'italienisch', 'klassiker'],
         ingredients: ['Spaghetti', 'Guanciale', 'Pecorino Romano', 'Eigelb', 'Schwarzer Pfeffer']
@@ -207,7 +213,6 @@ async function seedDatabaseIfEmpty() {
       {
         title: 'Lachs-Spinat-Pfanne mit Zitrone',
         duration: 25,
-        category: 'Fisch',
         notes: 'Eine leckere und cremige Pfanne mit frischem Lachsfilet und Spinat in einer leichten Weißwein-Sahne-Sauce.',
         tags: ['lowcarb', 'gesund', 'schnell'],
         ingredients: ['Lachsfilet', 'Blattspinat', 'Sahne', 'Weißwein', 'Knoblauch', 'Zitrone']
@@ -215,7 +220,6 @@ async function seedDatabaseIfEmpty() {
       {
         title: 'Zarter Rinderbraten in Rotweinsauce',
         duration: 120,
-        category: 'Fleisch',
         notes: 'Langsam geschmorter Rinderbraten mit Wurzelgemüse und einer kräftigen Rotweinsauce. Perfekt für das Sonntagsessen.',
         tags: ['sonntag', 'klassiker', 'deftig'],
         ingredients: ['Rindfleisch (Schmorbraten)', 'Karotten', 'Sellerie', 'Zwiebeln', 'Rotwein', 'Rinderfond', 'Lorbeerblätter']
@@ -223,7 +227,6 @@ async function seedDatabaseIfEmpty() {
       {
         title: 'Frischer Avocado-Mango Salat',
         duration: 15,
-        category: 'Veggie',
         notes: 'Ein fruchtig-frischer Sommersalat mit reifer Mango, cremiger Avocado und knackigem Rucola, verfeinert mit Limetten-Dressing.',
         tags: ['frisch', 'sommer', 'vegan', 'veggie'],
         ingredients: ['Avocado', 'Mango', 'Rucola', 'Limette', 'Olivenöl', 'Koriander', 'Kirschtomaten']
@@ -232,8 +235,8 @@ async function seedDatabaseIfEmpty() {
 
     for (const r of seedRecipes) {
       const res = await dbRun(
-        'INSERT INTO recipes (title, duration, category, notes) VALUES (?, ?, ?, ?)',
-        [r.title, r.duration, r.category, r.notes]
+        'INSERT INTO recipes (title, duration, notes) VALUES (?, ?, ?)',
+        [r.title, r.duration, r.notes]
       );
       const recipeId = res.lastID;
 
@@ -422,15 +425,15 @@ app.get('/api/recipes/:id', async (req, res) => {
 // POST Create recipe
 app.post('/api/recipes', upload.array('images', 20), async (req, res) => {
   try {
-    const { title, duration, category, notes, tags, ingredients } = req.body;
+    const { title, duration, notes, tags, ingredients } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Ein Rezept-Titel ist erforderlich!' });
     }
 
     const result = await dbRun(
-      'INSERT INTO recipes (title, duration, category, notes) VALUES (?, ?, ?, ?)',
-      [title.trim(), duration ? parseInt(duration) : null, category || null, notes || null]
+      'INSERT INTO recipes (title, duration, notes) VALUES (?, ?, ?)',
+      [title.trim(), duration ? parseInt(duration) : null, notes || null]
     );
     const recipeId = result.lastID;
 
@@ -503,7 +506,7 @@ app.post('/api/recipes', upload.array('images', 20), async (req, res) => {
 // PUT Update recipe details
 app.put('/api/recipes/:id', async (req, res) => {
   try {
-    const { title, duration, category, notes, tags, ingredients } = req.body;
+    const { title, duration, notes, tags, ingredients } = req.body;
     const recipeId = req.params.id;
 
     const r = await dbGet('SELECT id FROM recipes WHERE id = ?', [recipeId]);
@@ -514,8 +517,8 @@ app.put('/api/recipes/:id', async (req, res) => {
     }
 
     await dbRun(
-      'UPDATE recipes SET title = ?, duration = ?, category = ?, notes = ? WHERE id = ?',
-      [title.trim(), duration ? parseInt(duration) : null, category || null, notes || null, recipeId]
+      'UPDATE recipes SET title = ?, duration = ?, notes = ? WHERE id = ?',
+      [title.trim(), duration ? parseInt(duration) : null, notes || null, recipeId]
     );
 
     // Re-handle Tags
@@ -724,7 +727,7 @@ app.get('/api/plans/:id', async (req, res) => {
 
     const populated = [];
     for (const asg of assignments) {
-      const recipe = await dbGet('SELECT id, title, category FROM recipes WHERE id = ?', [asg.recipe_id]);
+      const recipe = await dbGet('SELECT id, title FROM recipes WHERE id = ?', [asg.recipe_id]);
       if (recipe) {
         const coverImg = await dbGet('SELECT image_path FROM recipe_images WHERE recipe_id = ? AND is_cover = 1', [recipe.id]);
         populated.push({
@@ -778,7 +781,7 @@ app.put('/api/plans/:id/assignments', async (req, res) => {
     
     const populated = [];
     for (const asg of finalAssignments) {
-      const recipe = await dbGet('SELECT id, title, category FROM recipes WHERE id = ?', [asg.recipe_id]);
+      const recipe = await dbGet('SELECT id, title FROM recipes WHERE id = ?', [asg.recipe_id]);
       if (recipe) {
         const coverImg = await dbGet('SELECT image_path FROM recipe_images WHERE recipe_id = ? AND is_cover = 1', [recipe.id]);
         populated.push({

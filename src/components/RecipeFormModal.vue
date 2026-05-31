@@ -22,29 +22,15 @@
           />
         </div>
         
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label for="recipe-duration">Zubereitungszeit (Minuten)</label>
-            <input
-              type="number"
-              id="recipe-duration"
-              min="1"
-              placeholder="z.B. 25"
-              v-model.number="duration"
-            />
-          </div>
-          <div class="form-group flex-1">
-            <label for="recipe-category">Kategorie</label>
-            <select id="recipe-category" v-model="category">
-              <option value="">-- Wählen --</option>
-              <option value="Pasta">Pasta</option>
-              <option value="Veggie">Veggie</option>
-              <option value="Fleisch">Fleisch</option>
-              <option value="Fisch">Fisch</option>
-              <option value="Dessert">Dessert</option>
-              <option value="Anderes">Anderes</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label for="recipe-duration">Zubereitungszeit (Minuten)</label>
+          <input
+            type="number"
+            id="recipe-duration"
+            min="1"
+            placeholder="z.B. 25"
+            v-model.number="duration"
+          />
         </div>
 
         <div class="form-group">
@@ -136,7 +122,6 @@ const emit = defineEmits(['close', 'recipe-saved']);
 const id = ref(null);
 const title = ref('');
 const duration = ref('');
-const category = ref('');
 const tags = ref('');
 const ingredients = ref('');
 const notes = ref('');
@@ -154,7 +139,6 @@ watch(
         id.value = newVal.id;
         title.value = newVal.title || '';
         duration.value = newVal.duration || '';
-        category.value = newVal.category || '';
         tags.value = newVal.tags ? newVal.tags.map(t => `#${t}`).join(' ') : '';
         ingredients.value = newVal.ingredients ? newVal.ingredients.join('\n') : '';
         notes.value = newVal.notes || '';
@@ -162,7 +146,6 @@ watch(
         id.value = null;
         title.value = '';
         duration.value = '';
-        category.value = '';
         tags.value = '';
         ingredients.value = '';
         notes.value = '';
@@ -199,7 +182,6 @@ async function handleSubmit() {
         body: JSON.stringify({
           title: title.value,
           duration: duration.value ? parseInt(duration.value) : null,
-          category: category.value,
           tags: tags.value,
           ingredients: ingredients.value,
           notes: notes.value
@@ -226,7 +208,6 @@ async function handleSubmit() {
       const formData = new FormData();
       formData.append('title', title.value);
       formData.append('duration', duration.value);
-      formData.append('category', category.value);
       formData.append('tags', tags.value);
       formData.append('ingredients', ingredients.value);
       formData.append('notes', notes.value);
