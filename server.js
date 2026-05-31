@@ -1,0 +1,835 @@
+import express from 'express';
+import sqlite3 from 'sqlite3';
+import multer from 'multer';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Enable CORS and JSON parsing
+app.use(cors());
+app.use(express.json());
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve uploads folder statically
+app.use('/uploads', express.static(uploadsDir));
+
+// Multer storage setup for recipe images
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp|gif/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Nur Bilder (jpeg, jpg, png, webp, gif) sind erlaubt!'));
+  }
+});
+
+// SQLite DB initialization
+const dbPath = path.join(__dirname, 'database.sqlite');
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Fehler beim Öffnen der SQLite-Datenbank:', err.message);
+  } else {
+    console.log('Erfolgreich mit SQLite-Datenbank verbunden.');
+    initDb();
+  }
+});
+
+// Promise wrappers for SQLite
+const dbRun = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+};
+
+const dbAll = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+};
+
+const dbGet = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+};
+
+// Database Schema creation & Self-Seeding
+async function initDb() {
+  await dbRun('PRAGMA foreign_keys = ON;');
+
+  // Recipes Table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS recipes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      duration INTEGER,
+      category TEXT,
+      notes TEXT
+    );
+  `);
+
+  // Images Table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS recipe_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recipe_id INTEGER,
+      image_path TEXT NOT NULL,
+      is_cover INTEGER DEFAULT 0,
+      FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Tags Table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL
+    );
+  `);
+
+  // Recipe Tags Mapping
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS recipe_tags (
+      recipe_id INTEGER,
+      tag_id INTEGER,
+      PRIMARY KEY (recipe_id, tag_id),
+      FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
+      FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Ingredients Table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS ingredients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL
+    );
+  `);
+
+  // Recipe Ingredients Mapping
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS recipe_ingredients (
+      recipe_id INTEGER,
+      ingredient_id INTEGER,
+      PRIMARY KEY (recipe_id, ingredient_id),
+      FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
+      FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Weekly Plans Table (with start_date)
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS weekly_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Plan Assignments Table (with meal_type)
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS plan_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id INTEGER,
+      day_of_week TEXT NOT NULL,
+      meal_type TEXT NOT NULL,
+      recipe_id INTEGER,
+      FOREIGN KEY (plan_id) REFERENCES weekly_plans(id) ON DELETE CASCADE,
+      FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+    );
+  `);
+
+  console.log('Datenbanktabellen initialisiert.');
+  
+  // Trigger self-seeding if database is completely empty
+  await seedDatabaseIfEmpty();
+}
+
+// -------------------------------------------------------------
+// SELF SEEDING LOGIC
+// -------------------------------------------------------------
+async function seedDatabaseIfEmpty() {
+  try {
+    const recCount = await dbGet('SELECT COUNT(*) as count FROM recipes');
+    if (recCount.count > 0) {
+      console.log('Datenbank bereits mit Rezepten befüllt. Seeding übersprungen.');
+      return;
+    }
+
+    console.log('Führe automatisches Seeding der Datenbank aus...');
+
+    // Starter Recipes
+    const seedRecipes = [
+      {
+        title: 'Cremige Spaghetti Carbonara',
+        duration: 20,
+        category: 'Pasta',
+        notes: 'Original römisches Rezept mit Guanciale (oder Pancetta), Eigelb und feinstem Pecorino Romano. Keine Sahne verwenden!',
+        tags: ['schnell', 'italienisch', 'klassiker'],
+        ingredients: ['Spaghetti', 'Guanciale', 'Pecorino Romano', 'Eigelb', 'Schwarzer Pfeffer']
+      },
+      {
+        title: 'Lachs-Spinat-Pfanne mit Zitrone',
+        duration: 25,
+        category: 'Fisch',
+        notes: 'Eine leckere und cremige Pfanne mit frischem Lachsfilet und Spinat in einer leichten Weißwein-Sahne-Sauce.',
+        tags: ['lowcarb', 'gesund', 'schnell'],
+        ingredients: ['Lachsfilet', 'Blattspinat', 'Sahne', 'Weißwein', 'Knoblauch', 'Zitrone']
+      },
+      {
+        title: 'Zarter Rinderbraten in Rotweinsauce',
+        duration: 120,
+        category: 'Fleisch',
+        notes: 'Langsam geschmorter Rinderbraten mit Wurzelgemüse und einer kräftigen Rotweinsauce. Perfekt für das Sonntagsessen.',
+        tags: ['sonntag', 'klassiker', 'deftig'],
+        ingredients: ['Rindfleisch (Schmorbraten)', 'Karotten', 'Sellerie', 'Zwiebeln', 'Rotwein', 'Rinderfond', 'Lorbeerblätter']
+      },
+      {
+        title: 'Frischer Avocado-Mango Salat',
+        duration: 15,
+        category: 'Veggie',
+        notes: 'Ein fruchtig-frischer Sommersalat mit reifer Mango, cremiger Avocado und knackigem Rucola, verfeinert mit Limetten-Dressing.',
+        tags: ['frisch', 'sommer', 'vegan', 'veggie'],
+        ingredients: ['Avocado', 'Mango', 'Rucola', 'Limette', 'Olivenöl', 'Koriander', 'Kirschtomaten']
+      }
+    ];
+
+    for (const r of seedRecipes) {
+      const res = await dbRun(
+        'INSERT INTO recipes (title, duration, category, notes) VALUES (?, ?, ?, ?)',
+        [r.title, r.duration, r.category, r.notes]
+      );
+      const recipeId = res.lastID;
+
+      // Handle tags
+      for (const tag of r.tags) {
+        let t = await dbGet('SELECT id FROM tags WHERE name = ?', [tag]);
+        let tagId;
+        if (!t) {
+          const tRes = await dbRun('INSERT INTO tags (name) VALUES (?)', [tag]);
+          tagId = tRes.lastID;
+        } else {
+          tagId = t.id;
+        }
+        await dbRun('INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)', [recipeId, tagId]);
+      }
+
+      // Handle ingredients
+      for (const ing of r.ingredients) {
+        let i = await dbGet('SELECT id FROM ingredients WHERE name = ?', [ing]);
+        let ingId;
+        if (!i) {
+          const iRes = await dbRun('INSERT INTO ingredients (name) VALUES (?)', [ing]);
+          ingId = iRes.lastID;
+        } else {
+          ingId = i.id;
+        }
+        await dbRun('INSERT OR IGNORE INTO recipe_ingredients (recipe_id, ingredient_id) VALUES (?, ?)', [recipeId, ingId]);
+      }
+      console.log(`Rezept geseedet: ${r.title}`);
+    }
+
+    // Create a default weekly plan for the current week
+    const now = new Date();
+    const monday = getMonday(now);
+    const formattedMonday = monday.toISOString().split('T')[0];
+    const kw = getCalenderWeekNumber(now);
+
+    await dbRun(
+      'INSERT INTO weekly_plans (name, start_date) VALUES (?, ?)',
+      [`KW ${kw}`, formattedMonday]
+    );
+    console.log(`Wochenplan geseedet: KW ${kw} (${formattedMonday})`);
+
+  } catch (error) {
+    console.error('Fehler beim Seeding:', error);
+  }
+}
+
+// Seeding helpers
+function getMonday(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
+
+function getCalenderWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return weekNo;
+}
+
+// -------------------------------------------------------------
+// RECIPE ENDPOINTS
+// -------------------------------------------------------------
+
+// Helper: Populate recipe detailed fields
+async function populateRecipeDetails(recipesList) {
+  const result = [];
+  for (const r of recipesList) {
+    const images = await dbAll('SELECT id, image_path, is_cover FROM recipe_images WHERE recipe_id = ?', [r.id]);
+    const tags = await dbAll(`
+      SELECT t.name FROM tags t 
+      JOIN recipe_tags rt ON t.id = rt.tag_id 
+      WHERE rt.recipe_id = ?
+    `, [r.id]);
+    const ingredients = await dbAll(`
+      SELECT i.name FROM ingredients i 
+      JOIN recipe_ingredients ri ON i.id = ri.ingredient_id 
+      WHERE ri.recipe_id = ?
+    `, [r.id]);
+
+    const coverImg = images.find(img => img.is_cover === 1) || images[0];
+
+    result.push({
+      ...r,
+      images,
+      cover_image: coverImg ? coverImg.image_path : null,
+      tags: tags.map(t => t.name),
+      ingredients: ingredients.map(i => i.name)
+    });
+  }
+  return result;
+}
+
+// GET all recipes (with query-search)
+app.get('/api/recipes', async (req, res) => {
+  try {
+    const queryStr = req.query.q || '';
+    if (!queryStr.trim()) {
+      const basicRecipes = await dbAll('SELECT * FROM recipes ORDER BY id DESC');
+      const fullRecipes = await populateRecipeDetails(basicRecipes);
+      return res.json(fullRecipes);
+    }
+
+    const tokens = queryStr.split(/\s+/).filter(Boolean);
+    const tagFilters = [];
+    const textFilters = [];
+
+    for (const token of tokens) {
+      if (token.startsWith('#')) {
+        const tag = token.slice(1).trim();
+        if (tag) tagFilters.push(tag);
+      } else {
+        textFilters.push(token);
+      }
+    }
+
+    let sql = 'SELECT DISTINCT r.* FROM recipes r';
+    const params = [];
+    const conditions = [];
+
+    if (tagFilters.length > 0) {
+      const tagPlaceholders = tagFilters.map(() => '?').join(',');
+      conditions.push(`r.id IN (
+        SELECT rt.recipe_id FROM recipe_tags rt
+        JOIN tags t ON rt.tag_id = t.id
+        WHERE t.name IN (${tagPlaceholders})
+        GROUP BY rt.recipe_id
+        HAVING COUNT(DISTINCT t.name) = ?
+      )`);
+      params.push(...tagFilters, tagFilters.length);
+    }
+
+    if (textFilters.length > 0) {
+      const textConditions = [];
+      for (const filter of textFilters) {
+        const p = `%${filter}%`;
+        textConditions.push(`(
+          r.title LIKE ? OR 
+          r.id IN (
+            SELECT ri.recipe_id FROM recipe_ingredients ri
+            JOIN ingredients i ON ri.ingredient_id = i.id
+            WHERE i.name LIKE ?
+          ) OR
+          r.id IN (
+            SELECT rt.recipe_id FROM recipe_tags rt
+            JOIN tags t ON rt.tag_id = t.id
+            WHERE t.name LIKE ?
+          )
+        )`);
+        params.push(p, p, p);
+      }
+      conditions.push(textConditions.join(' AND '));
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY r.id DESC';
+
+    const basicRecipes = await dbAll(sql, params);
+    const fullRecipes = await populateRecipeDetails(basicRecipes);
+    res.json(fullRecipes);
+  } catch (error) {
+    console.error('Fehler bei GET /api/recipes:', error);
+    res.status(500).json({ error: 'Serverfehler bei der Rezeptsuche' });
+  }
+});
+
+// GET single recipe
+app.get('/api/recipes/:id', async (req, res) => {
+  try {
+    const r = await dbGet('SELECT * FROM recipes WHERE id = ?', [req.params.id]);
+    if (!r) return res.status(404).json({ error: 'Rezept nicht gefunden' });
+    const full = await populateRecipeDetails([r]);
+    res.json(full[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Serverfehler bei Rezeptabfrage' });
+  }
+});
+
+// POST Create recipe
+app.post('/api/recipes', upload.array('images', 20), async (req, res) => {
+  try {
+    const { title, duration, category, notes, tags, ingredients } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Ein Rezept-Titel ist erforderlich!' });
+    }
+
+    const result = await dbRun(
+      'INSERT INTO recipes (title, duration, category, notes) VALUES (?, ?, ?, ?)',
+      [title.trim(), duration ? parseInt(duration) : null, category || null, notes || null]
+    );
+    const recipeId = result.lastID;
+
+    // Handle Uploaded Images
+    if (req.files && req.files.length > 0) {
+      for (let i = 0; i < req.files.length; i++) {
+        const imagePath = `uploads/${req.files[i].filename}`;
+        const isCover = i === 0 ? 1 : 0;
+        await dbRun(
+          'INSERT INTO recipe_images (recipe_id, image_path, is_cover) VALUES (?, ?, ?)',
+          [recipeId, imagePath, isCover]
+        );
+      }
+    }
+
+    // Handle Tags
+    if (tags) {
+      const tagList = (Array.isArray(tags) ? tags : tags.split(/[,\s]+/))
+        .map(t => t.replace('#', '').trim())
+        .filter(Boolean);
+
+      for (const tagName of tagList) {
+        let tag = await dbGet('SELECT id FROM tags WHERE name = ?', [tagName]);
+        let tagId;
+        if (!tag) {
+          const tRes = await dbRun('INSERT INTO tags (name) VALUES (?)', [tagName]);
+          tagId = tRes.lastID;
+        } else {
+          tagId = tag.id;
+        }
+        await dbRun('INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)', [recipeId, tagId]);
+      }
+    }
+
+    // Handle Ingredients
+    if (ingredients) {
+      let ingList = [];
+      try {
+        ingList = JSON.parse(ingredients);
+      } catch (e) {
+        ingList = ingredients.split('\n').map(i => i.trim()).filter(Boolean);
+      }
+
+      if (Array.isArray(ingList)) {
+        for (const ingName of ingList) {
+          const nameTrim = ingName.trim();
+          if (!nameTrim) continue;
+          let ing = await dbGet('SELECT id FROM ingredients WHERE name = ?', [nameTrim]);
+          let ingId;
+          if (!ing) {
+            const iRes = await dbRun('INSERT INTO ingredients (name) VALUES (?)', [nameTrim]);
+            ingId = iRes.lastID;
+          } else {
+            ingId = ing.id;
+          }
+          await dbRun('INSERT OR IGNORE INTO recipe_ingredients (recipe_id, ingredient_id) VALUES (?, ?)', [recipeId, ingId]);
+        }
+      }
+    }
+
+    const created = await dbGet('SELECT * FROM recipes WHERE id = ?', [recipeId]);
+    const full = await populateRecipeDetails([created]);
+    res.status(201).json(full[0]);
+  } catch (error) {
+    console.error('Fehler bei POST /api/recipes:', error);
+    res.status(500).json({ error: 'Serverfehler beim Erstellen des Rezepts' });
+  }
+});
+
+// PUT Update recipe details
+app.put('/api/recipes/:id', async (req, res) => {
+  try {
+    const { title, duration, category, notes, tags, ingredients } = req.body;
+    const recipeId = req.params.id;
+
+    const r = await dbGet('SELECT id FROM recipes WHERE id = ?', [recipeId]);
+    if (!r) return res.status(404).json({ error: 'Rezept nicht gefunden' });
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Titel ist erforderlich' });
+    }
+
+    await dbRun(
+      'UPDATE recipes SET title = ?, duration = ?, category = ?, notes = ? WHERE id = ?',
+      [title.trim(), duration ? parseInt(duration) : null, category || null, notes || null, recipeId]
+    );
+
+    // Re-handle Tags
+    await dbRun('DELETE FROM recipe_tags WHERE recipe_id = ?', [recipeId]);
+    if (tags) {
+      const tagList = (Array.isArray(tags) ? tags : tags.split(/[,\s]+/))
+        .map(t => t.replace('#', '').trim())
+        .filter(Boolean);
+
+      for (const tagName of tagList) {
+        let tag = await dbGet('SELECT id FROM tags WHERE name = ?', [tagName]);
+        let tagId;
+        if (!tag) {
+          const tRes = await dbRun('INSERT INTO tags (name) VALUES (?)', [tagName]);
+          tagId = tRes.lastID;
+        } else {
+          tagId = tag.id;
+        }
+        await dbRun('INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)', [recipeId, tagId]);
+      }
+    }
+
+    // Re-handle Ingredients
+    await dbRun('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [recipeId]);
+    if (ingredients) {
+      let ingList = [];
+      try {
+        ingList = Array.isArray(ingredients) ? ingredients : JSON.parse(ingredients);
+      } catch (e) {
+        ingList = ingredients.split('\n').map(i => i.trim()).filter(Boolean);
+      }
+
+      for (const ingName of ingList) {
+        const nameTrim = ingName.trim();
+        if (!nameTrim) continue;
+        let ing = await dbGet('SELECT id FROM ingredients WHERE name = ?', [nameTrim]);
+        let ingId;
+        if (!ing) {
+          const iRes = await dbRun('INSERT INTO ingredients (name) VALUES (?)', [nameTrim]);
+          ingId = iRes.lastID;
+        } else {
+          ingId = ing.id;
+        }
+        await dbRun('INSERT OR IGNORE INTO recipe_ingredients (recipe_id, ingredient_id) VALUES (?, ?)', [recipeId, ingId]);
+      }
+    }
+
+    const updated = await dbGet('SELECT * FROM recipes WHERE id = ?', [recipeId]);
+    const full = await populateRecipeDetails([updated]);
+    res.json(full[0]);
+  } catch (error) {
+    console.error('Fehler bei PUT /api/recipes:', error);
+    res.status(500).json({ error: 'Serverfehler beim Bearbeiten des Rezepts' });
+  }
+});
+
+// DELETE Recipe
+app.delete('/api/recipes/:id', async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const r = await dbGet('SELECT id FROM recipes WHERE id = ?', [recipeId]);
+    if (!r) return res.status(404).json({ error: 'Rezept nicht gefunden' });
+
+    const images = await dbAll('SELECT image_path FROM recipe_images WHERE recipe_id = ?', [recipeId]);
+
+    // DB deletion (triggers cascade)
+    await dbRun('DELETE FROM recipe_images WHERE recipe_id = ?', [recipeId]);
+    await dbRun('DELETE FROM recipe_tags WHERE recipe_id = ?', [recipeId]);
+    await dbRun('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [recipeId]);
+    await dbRun('DELETE FROM plan_assignments WHERE recipe_id = ?', [recipeId]);
+    await dbRun('DELETE FROM recipes WHERE id = ?', [recipeId]);
+
+    // Physical deletion
+    for (const img of images) {
+      const fullPath = path.join(__dirname, img.image_path);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    }
+
+    res.json({ message: 'Rezept erfolgreich gelöscht' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Löschen des Rezepts' });
+  }
+});
+
+// -------------------------------------------------------------
+// IMAGE ENDPOINTS
+// -------------------------------------------------------------
+app.post('/api/recipes/:id/images', upload.array('images', 20), async (req, res) => {
+  try {
+    const recipeId = req.params.id;
+    const r = await dbGet('SELECT id FROM recipes WHERE id = ?', [recipeId]);
+    if (!r) return res.status(404).json({ error: 'Rezept nicht gefunden' });
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'Keine Bilder übergeben' });
+    }
+
+    const existingCover = await dbGet('SELECT id FROM recipe_images WHERE recipe_id = ? AND is_cover = 1', [recipeId]);
+
+    for (let i = 0; i < req.files.length; i++) {
+      const imagePath = `uploads/${req.files[i].filename}`;
+      const isCover = (!existingCover && i === 0) ? 1 : 0;
+      await dbRun(
+        'INSERT INTO recipe_images (recipe_id, image_path, is_cover) VALUES (?, ?, ?)',
+        [recipeId, imagePath, isCover]
+      );
+    }
+
+    const updated = await dbGet('SELECT * FROM recipes WHERE id = ?', [recipeId]);
+    const full = await populateRecipeDetails([updated]);
+    res.json(full[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Serverfehler beim Bilder-Upload' });
+  }
+});
+
+app.put('/api/recipes/:id/images/:imageId/cover', async (req, res) => {
+  try {
+    const { id, imageId } = req.params;
+    const img = await dbGet('SELECT id FROM recipe_images WHERE id = ? AND recipe_id = ?', [imageId, id]);
+    if (!img) return res.status(404).json({ error: 'Bild existiert nicht' });
+
+    await dbRun('UPDATE recipe_images SET is_cover = 0 WHERE recipe_id = ?', [id]);
+    await dbRun('UPDATE recipe_images SET is_cover = 1 WHERE id = ?', [imageId]);
+
+    const updated = await dbGet('SELECT * FROM recipes WHERE id = ?', [id]);
+    const full = await populateRecipeDetails([updated]);
+    res.json(full[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Serverfehler bei Titelbildänderung' });
+  }
+});
+
+app.delete('/api/recipes/:id/images/:imageId', async (req, res) => {
+  try {
+    const { id, imageId } = req.params;
+    const img = await dbGet('SELECT * FROM recipe_images WHERE id = ? AND recipe_id = ?', [imageId, id]);
+    if (!img) return res.status(404).json({ error: 'Bild nicht gefunden' });
+
+    await dbRun('DELETE FROM recipe_images WHERE id = ?', [imageId]);
+
+    const fullPath = path.join(__dirname, img.image_path);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+
+    if (img.is_cover === 1) {
+      const remainingImg = await dbGet('SELECT id FROM recipe_images WHERE recipe_id = ? ORDER BY id ASC LIMIT 1', [id]);
+      if (remainingImg) {
+        await dbRun('UPDATE recipe_images SET is_cover = 1 WHERE id = ?', [remainingImg.id]);
+      }
+    }
+
+    const updated = await dbGet('SELECT * FROM recipes WHERE id = ?', [id]);
+    const full = await populateRecipeDetails([updated]);
+    res.json(full[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Serverfehler beim Bildlöschen' });
+  }
+});
+
+// -------------------------------------------------------------
+// PLAN ENDPOINTS
+// -------------------------------------------------------------
+app.get('/api/plans', async (req, res) => {
+  try {
+    const plans = await dbAll('SELECT * FROM weekly_plans ORDER BY start_date DESC');
+    res.json(plans);
+  } catch (error) {
+    res.status(500).json({ error: 'Serverfehler' });
+  }
+});
+
+app.post('/api/plans', async (req, res) => {
+  try {
+    const { name, start_date } = req.body;
+    if (!name || !name.trim() || !start_date) {
+      return res.status(400).json({ error: 'Name und Startdatum (Montag) sind Pflichtfelder!' });
+    }
+    
+    // Enforce check: is start_date unique? E.g. avoid duplicate plans for the exact same week
+    const existing = await dbGet('SELECT id FROM weekly_plans WHERE start_date = ?', [start_date]);
+    if (existing) {
+      return res.status(400).json({ error: 'Für diese Woche existiert bereits ein Wochenplan!' });
+    }
+
+    const result = await dbRun('INSERT INTO weekly_plans (name, start_date) VALUES (?, ?)', [name.trim(), start_date]);
+    const newPlan = await dbGet('SELECT * FROM weekly_plans WHERE id = ?', [result.lastID]);
+    res.status(201).json(newPlan);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Erstellen' });
+  }
+});
+
+app.get('/api/plans/:id', async (req, res) => {
+  try {
+    const planId = req.params.id;
+    const plan = await dbGet('SELECT * FROM weekly_plans WHERE id = ?', [planId]);
+    if (!plan) return res.status(404).json({ error: 'Plan nicht gefunden' });
+
+    const assignments = await dbAll('SELECT id, day_of_week, meal_type, recipe_id FROM plan_assignments WHERE plan_id = ?', [planId]);
+
+    const populated = [];
+    for (const asg of assignments) {
+      const recipe = await dbGet('SELECT id, title, category FROM recipes WHERE id = ?', [asg.recipe_id]);
+      if (recipe) {
+        const coverImg = await dbGet('SELECT image_path FROM recipe_images WHERE recipe_id = ? AND is_cover = 1', [recipe.id]);
+        populated.push({
+          id: asg.id,
+          day_of_week: asg.day_of_week,
+          meal_type: asg.meal_type,
+          recipe: {
+            ...recipe,
+            cover_image: coverImg ? coverImg.image_path : null
+          }
+        });
+      }
+    }
+
+    res.json({
+      ...plan,
+      assignments: populated
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Serverfehler' });
+  }
+});
+
+// Update assignments (accepts meal_type)
+app.put('/api/plans/:id/assignments', async (req, res) => {
+  try {
+    const planId = req.params.id;
+    const { assignments } = req.body; // Array of { day_of_week, meal_type, recipe_id }
+
+    const plan = await dbGet('SELECT id FROM weekly_plans WHERE id = ?', [planId]);
+    if (!plan) return res.status(404).json({ error: 'Plan nicht gefunden' });
+
+    if (!Array.isArray(assignments)) {
+      return res.status(400).json({ error: 'Ungültiges Assignments-Format' });
+    }
+
+    await dbRun('DELETE FROM plan_assignments WHERE plan_id = ?', [planId]);
+
+    for (const asg of assignments) {
+      const { day_of_week, meal_type, recipe_id } = asg;
+      if (!day_of_week || !meal_type || !recipe_id) continue;
+      await dbRun(
+        'INSERT INTO plan_assignments (plan_id, day_of_week, meal_type, recipe_id) VALUES (?, ?, ?, ?)',
+        [planId, day_of_week, meal_type, recipe_id]
+      );
+    }
+
+    // Return populated plan
+    const updatedPlan = await dbGet('SELECT * FROM weekly_plans WHERE id = ?', [planId]);
+    const finalAssignments = await dbAll('SELECT id, day_of_week, meal_type, recipe_id FROM plan_assignments WHERE plan_id = ?', [planId]);
+    
+    const populated = [];
+    for (const asg of finalAssignments) {
+      const recipe = await dbGet('SELECT id, title, category FROM recipes WHERE id = ?', [asg.recipe_id]);
+      if (recipe) {
+        const coverImg = await dbGet('SELECT image_path FROM recipe_images WHERE recipe_id = ? AND is_cover = 1', [recipe.id]);
+        populated.push({
+          id: asg.id,
+          day_of_week: asg.day_of_week,
+          meal_type: asg.meal_type,
+          recipe: {
+            ...recipe,
+            cover_image: coverImg ? coverImg.image_path : null
+          }
+        });
+      }
+    }
+
+    res.json({
+      ...updatedPlan,
+      assignments: populated
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler' });
+  }
+});
+
+app.delete('/api/plans/:id', async (req, res) => {
+  try {
+    const planId = req.params.id;
+    const plan = await dbGet('SELECT id FROM weekly_plans WHERE id = ?', [planId]);
+    if (!plan) return res.status(404).json({ error: 'Plan nicht gefunden' });
+
+    await dbRun('DELETE FROM plan_assignments WHERE plan_id = ?', [planId]);
+    await dbRun('DELETE FROM weekly_plans WHERE id = ?', [planId]);
+
+    res.json({ message: 'Plan erfolgreich gelöscht' });
+  } catch (error) {
+    res.status(500).json({ error: 'Serverfehler' });
+  }
+});
+
+// Serve frontend build if exists
+const clientDistDir = path.join(__dirname, 'dist');
+if (fs.existsSync(clientDistDir)) {
+  app.use(express.static(clientDistDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistDir, 'index.html'));
+  });
+}
+
+app.listen(PORT, () => {
+  console.log(`Server läuft auf http://localhost:${PORT}`);
+});

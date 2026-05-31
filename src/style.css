@@ -1,0 +1,2960 @@
+/* ==========================================================================
+   Wochen-Essensplaner - Apple-Style CSS Design System & Layout
+   ========================================================================== */
+
+/* Design Tokens & Theme Setup */
+:root {
+  /* LIGHT MODE (Apple-inspired) */
+  --bg-primary: #F2F2F7;       /* Apple System Grey 6 */
+  --bg-secondary: #FFFFFF;     /* Apple White Card */
+  --bg-tertiary: #E5E5EA;      /* Apple System Grey 5 */
+  --bg-glass: rgba(255, 255, 255, 0.75);
+  --bg-glass-heavy: rgba(255, 255, 255, 0.9);
+  
+  --border-color: rgba(0, 0, 0, 0.05);
+  --border-hover: rgba(0, 0, 0, 0.12);
+  
+  --text-primary: #000000;
+  --text-secondary: rgba(60, 60, 67, 0.6);
+  --text-muted: rgba(60, 60, 67, 0.35);
+  
+  --accent-primary: #55AFC8;        /* Brand Pastel Teal */
+  --accent-primary-hover: #3C97B0;
+  --accent-primary-glow: rgba(85, 175, 200, 0.15);
+  
+  --accent-secondary: #cddc2d;      /* Brand Lime Green */
+  --accent-success: #34C759;        /* Apple Green */
+  --accent-danger: #FF3B30;         /* Apple Red */
+  --accent-danger-hover: #D72E25;
+  
+  --card-shadow: 0 4px 18px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+  --modal-shadow: 0 30px 70px rgba(0, 0, 0, 0.15);
+  
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  
+  --transition-smooth: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-bounce: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* DARK MODE (Apple Dark-inspired) */
+body.dark-theme {
+  --bg-primary: #000000;       /* Apple Pure Black background */
+  --bg-secondary: #1C1C1E;     /* Apple System Grey 6 (Dark) */
+  --bg-tertiary: #2C2C2E;      /* Apple System Grey 5 (Dark) */
+  --bg-glass: rgba(28, 28, 30, 0.75);
+  --bg-glass-heavy: rgba(28, 28, 30, 0.92);
+  
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-muted: rgba(235, 235, 245, 0.35);
+  
+  --accent-primary: #55AFC8;        /* Brand Pastel Teal */
+  --accent-primary-hover: #72C7DE;
+  --accent-primary-glow: rgba(85, 175, 200, 0.25);
+  
+  --accent-secondary: #cddc2d;      /* Brand Lime Green */
+  --accent-success: #30D158;        /* Apple Dark Green */
+  --accent-danger: #FF453A;         /* Apple Dark Red */
+  --accent-danger-hover: #FF6961;
+  
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  --modal-shadow: 0 30px 80px rgba(0, 0, 0, 0.9);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme-forced) body:not(.light-theme) {
+    --bg-primary: #000000;
+    --bg-secondary: #1C1C1E;
+    --bg-tertiary: #2C2C2E;
+    --bg-glass: rgba(28, 28, 30, 0.75);
+    --bg-glass-heavy: rgba(28, 28, 30, 0.92);
+    
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-hover: rgba(255, 255, 255, 0.15);
+    
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(235, 235, 245, 0.6);
+    --text-muted: rgba(235, 235, 245, 0.35);
+    
+    --accent-primary: #55AFC8;
+    --accent-primary-hover: #72C7DE;
+    --accent-primary-glow: rgba(85, 175, 200, 0.25);
+    
+    --accent-secondary: #cddc2d;
+    --accent-success: #30D158;
+    --accent-danger: #FF453A;
+    --accent-danger-hover: #FF6961;
+    
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    --modal-shadow: 0 30px 80px rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* ==========================================================================
+   RESET & FOUNDATION
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", "Outfit", "Inter", sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+
+/* Material Icons size styling */
+ion-icon {
+  font-size: 20px;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--glass-shadow);
+}
+
+/* ==========================================================================
+   LAYOUT STRUCTURE (Sidebar & Main content)
+   ========================================================================== */
+.app-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* COLLAPSIBLE SIDEBAR */
+.recipe-sidebar {
+  width: 330px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  transform: translateX(-330px); /* Collapsed by default */
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: var(--glass-shadow);
+}
+
+.recipe-sidebar.active {
+  transform: translateX(0); /* Opened */
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-primary);
+}
+
+.sidebar-logo span {
+  font-size: 24px;
+}
+
+.sidebar-logo h3 {
+  font-family: "Outfit", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.btn-sidebar-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-bounce);
+}
+
+.btn-sidebar-toggle:hover {
+  background: var(--bg-tertiary);
+}
+
+.sidebar-actions {
+  padding: 16px 24px;
+}
+
+.sidebar-search-filter {
+  padding: 0 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* SEARCH TRIGGER BUTTON (in header) */
+.search-trigger-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 42px;
+  padding: 0 16px 0 48px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: 99px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  gap: 8px;
+}
+
+:root:not(.dark-theme) .search-trigger-btn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.02);
+}
+
+body.dark-theme .search-trigger-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+.search-trigger-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-glow);
+  transform: translateY(-1px);
+}
+
+.search-trigger-btn .search-icon {
+  position: absolute;
+  left: 16px;
+  color: var(--text-secondary);
+  font-size: 19px;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.search-trigger-btn:hover .search-icon {
+  color: var(--accent-primary);
+  transform: scale(1.15);
+}
+
+.search-trigger-text {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-trigger-kbd {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.category-pills {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.filter-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: var(--bg-tertiary);
+  border: none;
+  color: var(--text-secondary);
+  border-radius: 50px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-bounce);
+}
+
+.filter-pill:hover {
+  background: var(--border-hover);
+}
+
+.filter-pill.active {
+  background: var(--text-primary);
+  color: var(--bg-secondary);
+}
+
+/* Horizontal recipe cards swiper inside sidebar */
+.carousel-outer-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 24px;
+}
+
+.recipe-carousel {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  scrollbar-width: none;
+}
+
+.recipe-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel-control-btn {
+  position: absolute;
+  z-index: 10;
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+  transition: var(--transition-bounce);
+}
+
+.carousel-control-btn:hover {
+  transform: scale(1.1);
+  background: var(--bg-secondary);
+}
+
+.carousel-control-btn.prev { left: 8px; }
+.carousel-control-btn.next { right: 8px; }
+
+/* RECIPE CARDS */
+.recipe-card {
+  scroll-snap-align: start;
+  flex: 0 0 280px;
+  height: 100%;
+  max-height: 380px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: var(--transition-bounce);
+}
+
+.recipe-card:hover {
+  transform: scale(1.02);
+  border-color: var(--text-muted);
+}
+
+.recipe-card-image {
+  height: 170px;
+  width: 100%;
+  position: relative;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recipe-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.recipe-card:hover .recipe-card-image img {
+  transform: scale(1.04);
+}
+
+.recipe-card-no-image {
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.recipe-card-no-image ion-icon {
+  font-size: 32px;
+}
+
+.recipe-card-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 50px;
+}
+
+.recipe-card-drag-handle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--bg-glass-heavy);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--card-shadow);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: var(--transition-bounce);
+}
+
+.recipe-card:hover .recipe-card-drag-handle {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.recipe-card-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.recipe-card-title-group h3 {
+  font-size: 15px;
+  line-height: 1.3;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.recipe-card-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.recipe-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.recipe-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  position: relative;
+  z-index: 5;
+}
+
+.recipe-card-tags .tag-pill {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  position: relative;
+  z-index: 6;
+  pointer-events: auto;
+}
+
+.recipe-card-footer {
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.recipe-card-category {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+}
+
+.btn-card-action {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-bounce);
+}
+
+.btn-card-action:hover {
+  background: var(--bg-tertiary);
+  color: var(--accent-primary);
+}
+
+/* ==========================================================================
+   RIGHT MAIN CONTENT: WEEKLY PLANNER
+   ========================================================================== */
+.planner-main-content {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* HEADER STYLE (Apple blur navigation) */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+  z-index: 200;
+}
+
+.header-left-group {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.btn-header-action {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+  transition: var(--transition-bounce);
+}
+
+.btn-header-action:hover {
+  background: var(--bg-tertiary);
+}
+
+.btn-header-action .btn-text {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .btn-header-action .btn-text {
+    display: inline;
+  }
+}
+
+.week-title-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.week-title-area h1 {
+  font-family: "Outfit", sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.week-dates-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Plan switcher selector */
+.plan-navigator {
+  display: flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.btn-nav {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.btn-nav:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.btn-nav span {
+  font-size: 14px;
+}
+
+.plan-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.plan-select-wrapper select {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 24px 6px 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.plan-select-wrapper .select-icon {
+  position: absolute;
+  left: 8px;
+  font-size: 16px;
+  color: var(--accent-primary);
+  pointer-events: none;
+}
+
+.days-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.days-select-wrapper select {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 24px 6px 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.days-select-wrapper .select-icon {
+  position: absolute;
+  left: 8px;
+  font-size: 16px;
+  color: var(--accent-primary);
+  pointer-events: none;
+}
+
+/* 7 WEEK COLUMNS GRID VIEWPORT */
+.weekly-planner-viewport {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrollbars during swipe animations */
+  padding: 16px;
+  background-color: var(--bg-primary);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.weekly-planner-viewport.is-grabbing {
+  cursor: grabbing;
+}
+
+.weekly-planner-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--total-cols, 27), 1fr);
+  gap: var(--grid-gap, 8px);
+  width: calc((100% + var(--grid-gap, 8px)) * var(--total-cols, 27) / var(--visible-cols, 7) - var(--grid-gap, 8px));
+  height: 100%;
+  --grid-gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .weekly-planner-grid {
+    --visible-cols: 1 !important;
+    --grid-gap: 12px;
+  }
+  .weekly-planner-viewport {
+    padding: 8px;
+  }
+}
+
+/* Wochentag Spalte */
+.planner-day-col {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 12px;
+  height: 100%;
+  min-height: 250px;
+  transition: border-color 0.25s, box-shadow 0.25s, opacity 0.25s;
+}
+
+.planner-day-col.is-today {
+  border: 1px solid var(--accent-primary);
+  box-shadow: 0 0 10px rgba(85, 175, 200, 0.15);
+}
+
+.planner-day-col.is-past {
+  opacity: 0.65;
+  background: var(--bg-primary);
+}
+
+/* Carousel Slide Transition Effects */
+.carousel-slide-next-enter-active,
+.carousel-slide-next-leave-active,
+.carousel-slide-prev-enter-active,
+.carousel-slide-prev-leave-active,
+.carousel-slide-next-move,
+.carousel-slide-prev-move {
+  transition: all 0.38s cubic-bezier(0.25, 1, 0.22, 1);
+}
+
+/* Sliding Forward: New day enters from right, old day leaves to left */
+.carousel-slide-next-enter-from {
+  opacity: 0;
+  transform: translateX(60px);
+}
+.carousel-slide-next-leave-to {
+  opacity: 0;
+  transform: translateX(-60px);
+}
+
+/* Sliding Backward: New day enters from left, old day leaves to right */
+.carousel-slide-prev-enter-from {
+  opacity: 0;
+  transform: translateX(-60px);
+}
+.carousel-slide-prev-leave-to {
+  opacity: 0;
+  transform: translateX(60px);
+}
+
+/* Day columns leaving space collapse */
+.carousel-slide-next-leave-active,
+.carousel-slide-prev-leave-active {
+  position: absolute !important;
+  opacity: 0;
+  pointer-events: none;
+  width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  overflow: hidden;
+}
+
+
+.day-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.today-badge {
+  background-color: var(--accent-primary);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.slot-placeholder-empty-past {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+  background-color: rgba(0, 0, 0, 0.02);
+  min-height: 38px;
+  pointer-events: none;
+}
+
+.dark-theme .slot-placeholder-empty-past {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.day-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.day-title {
+  font-family: "Outfit", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.day-date-subtitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* SLOTS - MITTAGS & ABENDS */
+.day-meal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: none; /* Removed flex: 1 to allow natural collapsible heights */
+}
+
+.slot-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slot-header ion-icon {
+  font-size: 14px;
+}
+
+.slot-header.lunch ion-icon {
+  color: var(--accent-secondary);
+}
+
+.slot-header.dinner ion-icon {
+  color: var(--accent-primary);
+}
+
+/* Specific dropzones slots */
+.day-slot-dropzone {
+  border: 1.5px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  height: 38px; /* Compact height when empty */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  transition: height 0.22s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.2s, background-color 0.2s, transform 0.2s;
+  user-select: none;
+  overflow: hidden; /* Prevent text overflow during expand/collapse animations */
+}
+
+.day-slot-dropzone.dragover:not(.filled) {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-glow);
+  transform: scale(1.02);
+  height: 80px !important; /* Expand dynamically during active dragover */
+}
+
+.day-slot-dropzone.dragover.filled {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-glow);
+}
+
+.day-slot-dropzone:hover:not(.filled) {
+  border-color: var(--text-muted);
+  background: var(--bg-tertiary);
+}
+
+.slot-placeholder-prompt {
+  display: flex;
+  flex-direction: row; /* Horizontal layout for elegant compact presentation */
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.slot-placeholder-prompt ion-icon {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.slot-placeholder-prompt span {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* Filled slot recipe card styling */
+.day-slot-dropzone.filled {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  height: auto;
+  min-height: 80px;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 8px;
+  gap: 8px;
+}
+
+.day-slot-dropzone.filled .assigned-recipe-card {
+  border-bottom: none;
+  height: auto;
+}
+
+/* Polaroid Assigned Recipe Card Style */
+.assigned-recipe-card.polaroid-style {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px 8px 12px 8px; /* Classic Polaroid bottom margin */
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+  position: relative;
+  text-align: center;
+  transition: transform 0.15s ease, border 0.15s ease, opacity 0.15s ease;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+}
+
+.dark-theme .assigned-recipe-card.polaroid-style {
+  background-color: #1c1c1e;
+}
+
+.assigned-recipe-card-image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 4px;
+  position: relative;
+  background-color: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.assigned-recipe-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.assigned-recipe-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.assigned-recipe-thumb-placeholder ion-icon {
+  font-size: 28px;
+}
+
+.assigned-recipe-card-content {
+  padding: 2px 2px 0 2px;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.assigned-recipe-card.polaroid-style .assigned-recipe-name {
+  font-family: "Outfit", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* Float controls on Polaroid style */
+.assigned-recipe-card.polaroid-style .btn-remove-assigned {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.assigned-recipe-card.polaroid-style .btn-remove-assigned:hover {
+  background: #ffffff;
+  color: var(--accent-danger);
+}
+
+.dark-theme .assigned-recipe-card.polaroid-style .btn-remove-assigned {
+  background: rgba(28, 28, 30, 0.85);
+}
+
+.dark-theme .assigned-recipe-card.polaroid-style .btn-remove-assigned:hover {
+  background: #2c2c2e;
+  color: var(--accent-danger);
+}
+
+.assigned-recipe-card.polaroid-style:hover .btn-remove-assigned {
+  opacity: 1;
+}
+
+.assigned-recipe-card.polaroid-style .assigned-recipe-reorder-controls {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  flex-direction: row; /* Horizontal flex */
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 6px;
+  padding: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 15;
+  flex-shrink: 0;
+}
+
+.dark-theme .assigned-recipe-card.polaroid-style .assigned-recipe-reorder-controls {
+  background: rgba(28, 28, 30, 0.85);
+}
+
+.assigned-recipe-card.polaroid-style:hover .assigned-recipe-reorder-controls {
+  opacity: 1;
+}
+
+.assigned-recipe-card.polaroid-style .btn-reorder-asg {
+  background: transparent;
+  border: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  padding: 0;
+}
+
+.assigned-recipe-card.polaroid-style .btn-reorder-asg:hover {
+  background: var(--bg-tertiary);
+  color: var(--accent-primary);
+}
+
+.btn-add-another-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 8px;
+  background: var(--bg-primary);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.btn-add-another-slot:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.btn-add-another-slot ion-icon {
+  font-size: 13px;
+}
+
+.assigned-recipe-card.dragging {
+  opacity: 0.4;
+  background: var(--bg-tertiary) !important;
+  transition: none !important;
+}
+
+.assigned-recipe-card.dragover-top::before {
+  content: "";
+  position: absolute;
+  top: -1.5px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--accent-primary);
+  box-shadow: 0 0 4px var(--accent-primary-glow);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.assigned-recipe-card.dragover-bottom::after {
+  content: "";
+  position: absolute;
+  bottom: -1.5px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--accent-primary);
+  box-shadow: 0 0 4px var(--accent-primary-glow);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.day-slot-dropzone.highlight-drop {
+  border-color: var(--accent-primary-hover);
+  background-color: var(--bg-tertiary);
+}
+
+/* Disable pointer events on specific non-dropzone elements during any drag to prevent flickering */
+body.recipe-drag-active .btn-add-another-slot,
+body.assignment-drag-active .btn-add-another-slot,
+body.recipe-drag-active .slot-placeholder-prompt,
+body.assignment-drag-active .slot-placeholder-prompt,
+body.recipe-drag-active .assigned-recipe-card *,
+body.assignment-drag-active .assigned-recipe-card * {
+  pointer-events: none !important;
+}
+
+.assigned-recipe-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.assigned-recipe-thumb ion-icon {
+  font-size: 18px;
+}
+
+.assigned-recipe-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.assigned-recipe-name {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.assigned-recipe-category {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.btn-remove-assigned {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: var(--transition-smooth);
+}
+
+.btn-remove-assigned:hover {
+  background: var(--bg-tertiary);
+  color: var(--accent-danger);
+}
+
+.btn-remove-assigned ion-icon {
+  font-size: 14px;
+}
+
+/* ==========================================================================
+   MODALS (Apple overlay blur style)
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10000; /* Elevated above search-overlay (9999) so modals open on top of search! */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.modal-overlay.active {
+  display: flex;
+  opacity: 1;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 620px;
+  background: var(--bg-glass-heavy) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--modal-shadow);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  transform: scale(0.92) translateY(20px);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.modal-overlay.active .modal-content {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.modal-header h3 {
+  font-family: "Outfit", sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-bounce);
+}
+
+.modal-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-close.floating {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  background: var(--bg-secondary);
+  box-shadow: var(--card-shadow);
+}
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+.btn {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: var(--transition-bounce);
+  outline: none;
+}
+
+.btn-full-width {
+  width: 100%;
+}
+
+.btn ion-icon {
+  font-size: 16px;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: var(--accent-danger);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: var(--accent-danger-hover);
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+.btn-small {
+  padding: 5px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+.btn-small ion-icon {
+  font-size: 14px;
+}
+
+/* Theme Toggle styles */
+.theme-toggle-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--card-shadow);
+  transition: var(--transition-bounce);
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.05);
+  background: var(--bg-tertiary);
+}
+
+.theme-toggle-btn ion-icon {
+  font-size: 18px;
+}
+
+.sun-icon { display: none; }
+.moon-icon { display: block; }
+
+body.dark-theme .sun-icon { display: block; color: var(--accent-secondary); }
+body.dark-theme .moon-icon { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme-forced) body:not(.light-theme) .sun-icon { display: block; color: var(--accent-secondary); }
+  :root:not(.light-theme-forced) body:not(.light-theme) .moon-icon { display: none; }
+}
+
+/* ==========================================================================
+   FORMS & INPUTS
+   ========================================================================== */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.flex-1 { flex: 1; }
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+select:focus,
+textarea:focus {
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.file-upload-zone {
+  position: relative;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  text-align: center;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.file-upload-zone:hover {
+  border-color: var(--accent-primary);
+}
+
+.file-upload-zone input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-zone-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.upload-zone-prompt .upload-note {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.images-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.preview-image-item {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+}
+
+.preview-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-cover-indicator {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  background: var(--accent-secondary);
+  color: #fff;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: bold;
+}
+
+/* ==========================================================================
+   RECIPE DETAIL MODAL - CUSTOM APPLE STYLING
+   ========================================================================== */
+.recipe-detail-content {
+  max-width: 840px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.recipe-detail-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .recipe-detail-layout {
+    flex-direction: row;
+    height: 75vh;
+    max-height: 600px;
+  }
+  
+  .recipe-detail-gallery {
+    flex: 0 0 45%;
+    border-right: 1px solid var(--border-color);
+  }
+  
+  .recipe-detail-info {
+    flex: 0 0 55%;
+  }
+}
+
+.recipe-detail-gallery {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  padding: 16px;
+}
+
+.main-gallery-view {
+  flex: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 200px;
+}
+
+.main-gallery-view img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.cover-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: var(--accent-secondary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+}
+
+.thumbnail-gallery-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.detail-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.detail-thumb.active {
+  border-color: var(--accent-primary);
+}
+
+.detail-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-management-row {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+
+.image-upload-label { cursor: pointer; }
+
+/* Modal details column */
+.recipe-detail-info {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.detail-header-group {
+  margin-bottom: 16px;
+}
+
+.detail-category-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-header-group h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.detail-meta-row {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.detail-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.detail-meta-item ion-icon {
+  font-size: 14px;
+  color: var(--accent-primary);
+}
+
+.tags-container-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tags-container-pills .tag-pill {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: 50px;
+}
+
+.detail-body-section {
+  margin-bottom: 16px;
+}
+
+.detail-body-section h3 {
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+.detail-ingredients-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+@media (min-width: 500px) {
+  .detail-ingredients-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.detail-ingredients-list li {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.detail-ingredients-list li input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+  width: 14px;
+  height: 14px;
+}
+
+.detail-ingredients-list li input[type="checkbox"]:checked + span {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+#detail-notes {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+/* Modal mobile quick planner details assign buttons */
+.detail-assign-section {
+  padding: 12px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-assign-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.assign-slots-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.assign-slot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.assign-slot-name {
+  font-weight: 600;
+}
+
+.assign-slot-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-slot-toggle {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition-bounce);
+}
+
+.btn-slot-toggle:hover {
+  background: var(--bg-tertiary);
+}
+
+.btn-slot-toggle.assigned {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+.detail-admin-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.plan-modal-content { max-width: 380px; }
+
+/* Floating context quick dropdown (Mobile menu) */
+.floating-assign-dropdown {
+  animation: dropdownFadeIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   HIDDEN DAYS FEATURE STYLING (Apple aesthetic)
+   ========================================================================== */
+.day-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.btn-hide-day {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-bounce);
+  opacity: 0; /* Hide by default, reveal on hover */
+}
+
+.planner-day-col:hover .btn-hide-day {
+  opacity: 1;
+}
+
+.btn-hide-day:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.btn-hide-day ion-icon {
+  font-size: 14px;
+}
+
+.hidden-days-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass-heavy);
+  animation: barSlideDown 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes barSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hidden-days-bar span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hidden-days-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hidden-day-pill {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 50px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition-bounce);
+}
+
+.hidden-day-pill:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.hidden-day-pill ion-icon {
+  font-size: 12px;
+  color: var(--accent-primary);
+}
+
+.hidden-col {
+  display: none !important;
+}
+
+/* ==========================================================================
+   CENTRAL SEARCH BAR STYLING & RESPONSIVENESS
+   ========================================================================== */
+.header-center-group {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: var(--transition-bounce);
+}
+
+.header-center-group .search-input-wrapper {
+  width: 100%;
+}
+
+/* Stretching centered layout for desktop header to maximize search bar width */
+@media (min-width: 821px) {
+  .main-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    padding: 14px 28px;
+    gap: 32px; /* Generous gap/margin to other elements */
+  }
+  
+  .header-left-group {
+    justify-self: start;
+    flex-shrink: 0;
+  }
+  
+  .header-center-group {
+    justify-self: stretch;
+    width: 100%;
+    max-width: 760px; /* Generous width to utilize screen space beautifully */
+    margin: 0 auto; /* Perfect centering within the remaining space */
+    display: flex;
+  }
+  
+  .header-right-group {
+    justify-self: end;
+    flex-shrink: 0;
+  }
+}
+
+/* Responsive main header for mobile / tablet */
+@media (max-width: 820px) {
+  .main-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "left right"
+      "center center";
+    row-gap: 12px;
+    column-gap: 16px;
+    padding: 14px 20px;
+  }
+  
+  .header-left-group {
+    grid-area: left;
+    justify-content: flex-start;
+  }
+  
+  .header-right-group {
+    grid-area: right;
+    justify-content: flex-end;
+  }
+  
+  .header-center-group {
+    grid-area: center;
+    display: flex;
+    max-width: 100%;
+    margin: 4px 0 0 0;
+  }
+
+  .search-overlay-container {
+    padding-top: 140px;
+  }
+}
+
+/* ==========================================================================
+   FLOATING SEARCH OVERLAY CAROUSEL STYLING (3D DECK FLOW & PLANNER BLUR)
+   ========================================================================== */
+.weekly-planner-viewport {
+  position: relative; /* relative positioning for absolute child overlay */
+}
+
+.search-overlay-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 150;
+  padding: 96px 32px 32px 32px;
+  border: none !important; /* HIDE CONTAINER BORDER! */
+  border-radius: 0 !important; /* Span full viewport size */
+  background: transparent !important; /* Transparent container to prevent hit-testing bug! */
+  box-shadow: none !important; /* No shadow needed as it fills the view */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Header at the top */
+  align-items: center; /* Horizontally centered */
+  overflow: hidden;
+  transition: var(--transition-smooth);
+  animation: overlayCenterFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-overlay-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Place behind all cards/header content */
+  background: rgba(242, 242, 247, 0.45) !important; /* Frosted white glass */
+  backdrop-filter: blur(5px) saturate(100%) !important; /* Soft, highly-subtle blur to keep planner visible! */
+  -webkit-backdrop-filter: blur(5px) saturate(100%) !important;
+  pointer-events: none; /* Let all click events pass through cleanly! */
+  transition: opacity 0.38s ease, backdrop-filter 0.38s ease, -webkit-backdrop-filter 0.38s ease;
+}
+
+body.dark-theme .search-overlay-backdrop {
+  background: rgba(0, 0, 0, 0.45) !important; /* Frosted black glass */
+}
+
+/* Hide backdrop completely when dragging from search overlay */
+body.search-drag-active .search-overlay-backdrop {
+  opacity: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@keyframes overlayCenterFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.search-overlay-header {
+  display: flex;
+  justify-content: flex-end; /* Push the close button to the far right */
+  align-items: center;
+  position: relative; /* Coordinate context for absolute horizontal centering */
+  width: 100%;
+  max-width: 700px; /* Slightly narrower for a more compact, balanced aesthetic! */
+  margin-bottom: 24px; /* Elegant vertical spacing */
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+  z-index: 10;
+}
+
+.search-overlay-logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* Perfectly center "SUCHERGEBNISSE" horizontally! */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-primary);
+}
+
+.search-overlay-logo ion-icon {
+  font-size: 20px;
+}
+
+.search-overlay-logo h4 {
+  font-family: "Outfit", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.btn-close-search-overlay {
+  background: var(--bg-tertiary);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-bounce);
+  box-shadow: var(--card-shadow);
+}
+
+.btn-close-search-overlay:hover {
+  background: var(--accent-danger);
+  color: #ffffff;
+  transform: scale(1.15);
+}
+
+/* 3D coverflow container wrapper (Vertically Centered) */
+.search-overlay-carousel-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  flex-grow: 1; /* Stretch vertically to center cards precisely in remaining viewport height */
+  height: auto; /* Allow grow to control height */
+  perspective: 1400px; /* Enhanced 3D perspective depth */
+  overflow: visible;
+}
+
+.overlay-recipe-carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-style: preserve-3d; /* 3D context for stacked elements */
+  overflow: visible;
+}
+
+/* Floating controls outside the deck */
+.search-overlay-carousel-wrapper .carousel-control-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 999 !important; /* Force it to stay at the very top stacking layer! */
+  width: 48px; /* Slightly larger, more tactile button */
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: var(--transition-bounce);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-overlay-carousel-wrapper .carousel-control-btn:hover {
+  background: var(--accent-primary);
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.12);
+  box-shadow: var(--accent-primary-glow);
+}
+
+.search-overlay-carousel-wrapper .carousel-control-btn.prev {
+  left: 20px;
+}
+
+.search-overlay-carousel-wrapper .carousel-control-btn.next {
+  right: 20px;
+}
+
+/* 3D RIGHT-STACKED POLAROID CARD DESIGN */
+.overlay-recipe-card {
+  position: absolute; /* Absolute overlayed layout to form a deck stacking to the right */
+  top: 50%;
+  left: 50%;
+  margin-top: -192px; /* Shift up by half the height for perfect vertical centering! */
+  margin-left: -160px; /* Shift left by half the width for perfect horizontal centering! */
+  width: 320px; /* Polaroid width (perfect balance between massive and compact) */
+  height: 384px; /* Aspect ratio exactly 1 : 1.2 */
+  background: #ffffff; /* Default beautiful white Polaroid paper background for light mode! */
+  color: #1d1d1f; /* Default dark text color for light mode! */
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg); /* Beautiful rounded corners 20px */
+  padding: 14px 14px 0 14px; /* Polaroid frame: borders on left, top, right */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  user-select: none;
+  transform-style: preserve-3d;
+  transition: transform 0.38s cubic-bezier(0.25, 1, 0.22, 1), 
+              opacity 0.38s cubic-bezier(0.25, 1, 0.22, 1), 
+              z-index 0.38s cubic-bezier(0.25, 1, 0.22, 1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease,
+              background 0.3s ease;
+}
+
+/* Sleek dark-mode theme override for the Polaroid search cards */
+body.dark-theme .overlay-recipe-card {
+  background: #1c1c1e; /* Sleek Apple System Grey 6 (Dark) */
+  color: #f5f5f7; /* High-contrast off-white text color for dark mode! */
+  border-color: var(--border-color);
+}
+
+/* Custom styles for active card in front */
+.overlay-recipe-card.active-cover:hover {
+  transform: translateX(0) translateZ(240px) rotateY(0deg) scale(1.25) !important;
+  box-shadow: var(--modal-shadow), 0 28px 70px rgba(88, 86, 214, 0.2);
+  border-color: var(--accent-primary);
+  cursor: default; /* Default cursor for general card background */
+}
+
+/* Limit drag cursor only to the cover image area */
+.overlay-recipe-card.active-cover:hover .overlay-recipe-card-image {
+  cursor: grab !important;
+}
+
+.overlay-recipe-card.active-cover:active .overlay-recipe-card-image {
+  cursor: grabbing !important;
+}
+
+.overlay-recipe-card-content {
+  cursor: default !important; /* Explicitly default cursor for content text area */
+}
+
+/* Dragging state: transform massive Polaroid into a gorgeous compact thumbnail! */
+.overlay-recipe-card.dragging {
+  width: 140px !important;
+  height: 180px !important;
+  margin-top: -90px !important; /* Center the smaller height! */
+  margin-left: -70px !important; /* Center the smaller width! */
+  padding: 6px 6px 0 6px !important;
+  opacity: 0.9 !important;
+  transform: scale(1) !important;
+  border: 2px solid var(--accent-primary) !important;
+  box-shadow: var(--shadow-lg) !important;
+  z-index: 9999 !important;
+  transition: none !important; /* No transitions during drag to prevent drag lag! */
+}
+
+.overlay-recipe-card.dragging .overlay-recipe-card-image {
+  height: 128px !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+.overlay-recipe-card.dragging .overlay-recipe-card-content {
+  padding: 4px 2px !important;
+  gap: 0 !important;
+}
+
+.overlay-recipe-card.dragging .overlay-recipe-card-content h3 {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.overlay-recipe-card.dragging .overlay-recipe-card-tags {
+  display: none !important; /* Hide tags to keep thumbnail ultra-clean! */
+}
+
+.overlay-recipe-card.dragging .recipe-info-btn {
+  display: none !important; /* Hide info button on thumbnail when dragging onto the plan! */
+}
+
+/* Style changes when dragging a recipe card from search (Hides blur & other cards) */
+body.search-drag-active .search-overlay-container {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important; /* Let drag clicks pass through container to dropzones! */
+}
+
+body.search-drag-active .search-overlay-header,
+body.search-drag-active .carousel-control-btn,
+body.search-drag-active .overlay-recipe-card:not(.dragging) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.2s ease !important;
+}
+
+/* Polaroid image section: perfectly square (1:1) and framed */
+.overlay-recipe-card-image {
+  width: 100%;
+  aspect-ratio: 1 / 1; /* PERFECT SQUARE PHOTO! */
+  height: 292px; /* 320px - 28px padding */
+  border-radius: 8px; /* Slightly rounded image corners inside Polaroid frame */
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05); /* fine photo shadow */
+}
+
+.overlay-recipe-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: var(--transition-smooth);
+}
+
+.overlay-recipe-card.active-cover:hover .overlay-recipe-card-image img {
+  transform: scale(1.05);
+}
+
+/* iOS-style Info Button next to Recipe Title */
+.overlay-recipe-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0 !important;
+}
+
+.overlay-recipe-card-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-grow: 1;
+}
+
+.recipe-info-btn {
+  position: relative;
+  background: transparent !important;
+  border: none !important;
+  color: var(--accent-primary) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  box-shadow: none !important;
+  flex-shrink: 0; /* Never shrink the info icon! */
+  padding: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.recipe-info-btn ion-icon {
+  font-size: 20px; /* Crisp high-quality outline icon */
+  display: block;
+}
+
+body.dark-theme .recipe-info-btn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--accent-primary) !important;
+}
+
+.recipe-info-btn:hover {
+  transform: scale(1.22) !important;
+  color: var(--accent-primary) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.recipe-info-btn:active {
+  transform: scale(0.92) !important;
+}
+
+/* Default food SVG illustration styles */
+.recipe-default-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Polaroid bottom frame (text area) */
+.overlay-recipe-card-content {
+  padding: 8px 6px 8px 6px; /* Reduced vertical padding to prevent title/tag overflow! */
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Reduced gap to fit titles and tags beautifully */
+  flex-grow: 1;
+  background: transparent !important; /* blend seamlessly with Polaroid background */
+  justify-content: center;
+  transform: translateZ(10px); /* 3D layer hit-testing projection fix! */
+}
+
+.overlay-recipe-card-content h3 {
+  font-family: "Outfit", sans-serif;
+  font-size: 15px; /* compact elegant polaroid label font size */
+  font-weight: 700;
+  color: inherit; /* Inherit high-contrast color dynamically from the parent card! */
+  margin: 0;
+  line-height: 1.35;
+  display: block; /* robust standard block layout to avoid 3D stacking bugs! */
+  white-space: nowrap; /* keep text strictly on a single line */
+  text-overflow: ellipsis; /* clean hand-written style trailing dots */
+  overflow: hidden;
+  height: 20px;
+  text-align: center; /* Centered like a Polaroid caption! */
+}
+
+/* Symmetrical title layout with info button next to it */
+.overlay-recipe-card-content h3.overlay-recipe-card-title {
+  display: flex !important;
+  align-items: center;
+  justify-content: center; /* Center title caption text */
+  width: 100%;
+  position: relative;
+  overflow: visible !important; /* Prevent clipping the info button! */
+  height: 24px !important; /* Give comfortable height for button */
+}
+
+.overlay-recipe-card-content h3.overlay-recipe-card-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: calc(100% - 32px); /* Avoid overlapping with info button */
+  text-align: center;
+}
+
+.overlay-recipe-card-content h3.overlay-recipe-card-title .recipe-info-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) !important;
+  flex-shrink: 0;
+}
+
+/* Make hover scale work in absolute context */
+.overlay-recipe-card-content h3.overlay-recipe-card-title .recipe-info-btn:hover {
+  transform: translateY(-50%) scale(1.15) !important;
+}
+
+/* Tags section */
+.overlay-recipe-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 18px;
+  overflow: hidden;
+  justify-content: center; /* Center-aligned tags! */
+}
+
+.overlay-tag-pill {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--accent-primary-glow);
+  padding: 3px 9px; /* Slightly increased padding for better click-target area! */
+  border-radius: 4px;
+  white-space: nowrap;
+  transform: translateZ(15px); /* Lift even higher in 3D for perfect click-capture! */
+}
+
+/* Highlight free slots pulsing border */
+.day-slot-dropzone.highlight-free {
+  border: 2px dashed var(--accent-primary) !important;
+  background: rgba(88, 86, 214, 0.06) !important;
+  box-shadow: 0 0 0 3px var(--accent-primary-glow) !important;
+  animation: pulseSlotBorder 1.5s infinite ease-in-out;
+  height: 80px !important; /* Expand empty slots dynamically when user is dragging a recipe */
+}
+
+@keyframes pulseSlotBorder {
+  0% {
+    border-color: var(--accent-primary);
+    background: rgba(88, 86, 214, 0.05);
+  }
+  50% {
+    border-color: var(--accent-primary-hover);
+    background: rgba(88, 86, 214, 0.12);
+    box-shadow: 0 0 0 6px var(--accent-primary-glow);
+  }
+  100% {
+    border-color: var(--accent-primary);
+    background: rgba(88, 86, 214, 0.05);
+  }
+}
+
+/* ==========================================================================
+   UNIFIED SEARCH OVERLAY (Fullscreen, replaces old Spotlight + Search Overlay)
+   ========================================================================== */
+.unified-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.32s cubic-bezier(0.25, 1, 0.22, 1);
+}
+
+.unified-search-overlay.active {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.unified-search-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  z-index: 0;
+}
+
+body.dark-theme .unified-search-backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.unified-search-panel {
+  position: relative;
+  z-index: 1;
+  width: 660px;
+  max-width: 92vw;
+  margin-top: 12vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transform: translateY(-16px) scale(0.96);
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.22, 1),
+              opacity 0.35s cubic-bezier(0.25, 1, 0.22, 1);
+  opacity: 0;
+}
+
+.unified-search-overlay.active .unified-search-panel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+/* Search bar */
+.unified-search-bar {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  flex-direction: column; /* Stack top input row and bottom chips row vertically! */
+  align-items: stretch;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 0 16px;
+  transition: all 0.38s cubic-bezier(0.25, 1, 0.22, 1); /* Symmetrical smooth expansion */
+}
+
+body.dark-theme .unified-search-bar {
+  background: #1c1c1e;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.unified-search-icon {
+  color: var(--accent-primary);
+  font-size: 24px;
+  flex-shrink: 0;
+  pointer-events: none;
+  margin-right: 12px;
+}
+
+.unified-search-bar input[type="text"] {
+  flex: 1;
+  height: 56px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  outline: none;
+}
+
+.unified-search-bar input[type="text"]::placeholder {
+  color: var(--text-muted);
+}
+
+.unified-search-clear {
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: none; /* shown via JS when query is non-empty */
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: var(--transition-bounce);
+}
+
+.unified-search-clear.visible {
+  display: flex;
+}
+
+body.dark-theme .unified-search-clear {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.unified-search-clear:hover {
+  background: var(--accent-danger) !important;
+  color: #fff !important;
+  transform: scale(1.15);
+}
+
+.unified-search-clear ion-icon {
+  font-size: 14px;
+}
+
+/* Hint row */
+.unified-search-hint {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 8px 0;
+}
+
+.unified-search-hint span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.unified-search-hint kbd {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  margin: 0 2px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Results area (carousel) */
+.unified-search-results {
+  margin-top: 200px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unified-search-carousel-wrapper {
+  position: relative;
+  width: 90vw;
+  max-width: 1100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1200px;
+  min-height: 280px;
+}
+
+.unified-search-carousel-wrapper .carousel-control-btn {
+  position: absolute;
+  z-index: 50;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-bounce);
+}
+
+.unified-search-carousel-wrapper .carousel-control-btn:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.unified-search-carousel-wrapper .carousel-control-btn.prev {
+  left: -20px;
+}
+
+.unified-search-carousel-wrapper .carousel-control-btn.next {
+  right: -20px;
+}
+
+/* Drag active: hide overlay completely to let planner be visible for drop targets without any shimmering elements or duplicate center cards */
+body.search-drag-active .unified-search-overlay {
+  opacity: 0.01 !important; /* Use 0.01 instead of 0 to prevent Chromium from canceling active HTML5 drag operations */
+  pointer-events: none !important;
+  transition: opacity 0.15s ease !important;
+}
+
+body.search-drag-active .unified-search-bar,
+body.search-drag-active .unified-search-hint,
+body.search-drag-active .overlay-recipe-carousel,
+body.search-drag-active .carousel-control-btn,
+body.search-drag-active .overlay-recipe-card {
+  opacity: 0.01 !important; /* Use 0.01 instead of 0 to prevent Chromium from canceling active HTML5 drag operations */
+  pointer-events: none !important;
+}
+
+
+
+/* Unified Tag Pills secondary accent styling (#cddc2d) */
+.recipe-card-tags .tag-pill,
+.tags-container-pills .tag-pill,
+.overlay-tag-pill {
+  display: inline-block !important;
+  background: var(--accent-secondary) !important;
+  color: #121212 !important;
+  cursor: pointer !important;
+  transition: filter 0.22s ease, box-shadow 0.22s ease !important;
+  border: none !important;
+}
+
+.recipe-card-tags .tag-pill:hover,
+.tags-container-pills .tag-pill:hover,
+.overlay-tag-pill:hover {
+  filter: brightness(1.15) !important;
+  box-shadow: 0 4px 10px rgba(205, 220, 45, 0.35) !important;
+}
+
+.recipe-card-tags .tag-pill:active,
+.tags-container-pills .tag-pill:active,
+.overlay-tag-pill:active {
+  transform: scale(0.95) !important;
+}
+
+/* Top row inside search capsule holding icon, text input, and clear button */
+.search-bar-top-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Active tag chips container in search overlay (nested inside search bar) */
+.unified-search-bar .search-active-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0;
+  margin-bottom: 16px; /* Symmetrical padding at the bottom when chips are shown! */
+  justify-content: flex-start;
+  padding: 0 0 0 36px; /* Aligns perfectly with input text (below icon margin-right of 12px + icon width of 24px) */
+  width: 100%;
+  animation: expandChips 0.3s cubic-bezier(0.25, 1, 0.22, 1);
+  overflow: hidden;
+}
+
+@keyframes expandChips {
+  from {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+  }
+  to {
+    max-height: 100px;
+    opacity: 1;
+    margin-bottom: 16px;
+  }
+}
+
+/* Individual tag chip */
+.search-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #121212;
+  background: var(--accent-secondary);
+  padding: 4px 10px;
+  border-radius: 99px; /* Smooth rounded pill */
+  animation: popIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 12px rgba(205, 220, 45, 0.25);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(205, 220, 45, 0.4);
+}
+
+/* Animating pop in */
+@keyframes popIn {
+  0% {
+    transform: scale(0.8) translateY(4px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Remove chip button */
+.btn-remove-chip {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #121212;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  transition: all 0.2s ease;
+}
+
+.btn-remove-chip ion-icon {
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.btn-remove-chip:hover {
+  background: #121212;
+  color: #ffffff;
+}
