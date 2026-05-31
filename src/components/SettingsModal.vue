@@ -97,32 +97,36 @@
           </h3>
           <p class="settings-section-desc">Kopple die App mit deinem Bring! Account, um Zutaten per Knopfdruck dorthin zu exportieren.</p>
 
-          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Bring! E-Mail</label>
-              <input 
-                type="email" 
-                v-model="bringEmail" 
-                placeholder="beispiel@mail.de" 
-                class="form-control" 
-                style="width: 100%;"
-              />
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 16px;">
+            <div class="bring-input-group">
+              <label class="bring-input-label">Bring! E-Mail</label>
+              <div class="bring-input-wrapper">
+                <ion-icon name="mail-outline" class="bring-input-icon"></ion-icon>
+                <input 
+                  type="email" 
+                  v-model="bringEmail" 
+                  placeholder="beispiel@mail.de" 
+                  class="bring-input"
+                />
+              </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Bring! Passwort</label>
-              <input 
-                type="password" 
-                v-model="bringPassword" 
-                :placeholder="bringHasPassword ? '•••••••• (Gespeichert)' : 'Dein Bring! Passwort'" 
-                class="form-control" 
-                style="width: 100%;"
-              />
+            <div class="bring-input-group">
+              <label class="bring-input-label">Bring! Passwort</label>
+              <div class="bring-input-wrapper">
+                <ion-icon name="lock-closed-outline" class="bring-input-icon"></ion-icon>
+                <input 
+                  type="password" 
+                  v-model="bringPassword" 
+                  :placeholder="bringHasPassword ? '•••••••• (Gespeichert)' : 'Dein Bring! Passwort'" 
+                  class="bring-input"
+                />
+              </div>
             </div>
 
             <button 
               class="btn btn-secondary btn-full-width" 
-              style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; margin-top: 6px;"
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; margin-top: 4px;"
               @click="handleBringTest"
               :disabled="testingBring || !bringEmail"
             >
@@ -131,14 +135,17 @@
             </button>
 
             <!-- Success List Selection Dropdown -->
-            <div v-if="bringLists.length > 0" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px;">
-              <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Wähle deine Einkaufsliste</label>
-              <select v-model="bringSelectedUuid" class="form-control" style="width: 100%; cursor: pointer;" @change="onListSelected">
-                <option value="" disabled>Bitte eine Liste auswählen...</option>
-                <option v-for="lst in bringLists" :key="lst.listUuid" :value="lst.listUuid">
-                  {{ lst.name }}
-                </option>
-              </select>
+            <div v-if="bringLists.length > 0" class="bring-input-group" style="margin-top: 4px;">
+              <label class="bring-input-label">Wähle deine Einkaufsliste</label>
+              <div class="bring-input-wrapper">
+                <ion-icon name="list-outline" class="bring-input-icon"></ion-icon>
+                <select v-model="bringSelectedUuid" class="bring-input" style="cursor: pointer;" @change="onListSelected">
+                  <option value="" disabled>Bitte eine Liste auswählen...</option>
+                  <option v-for="lst in bringLists" :key="lst.listUuid" :value="lst.listUuid">
+                    {{ lst.name }}
+                  </option>
+                </select>
+              </div>
             </div>
             
             <div v-else-if="bringSelectedName" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
@@ -367,3 +374,73 @@ async function handleBringSave() {
   }
 }
 </script>
+
+<style scoped>
+.bring-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.bring-input-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+.bring-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.bring-input-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 18px;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color 0.3s ease;
+}
+
+.bring-input {
+  width: 100%;
+  padding: 12px 14px 12px 42px !important;
+  font-family: inherit;
+  font-size: 14px;
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary) !important;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.22, 1) !important;
+}
+
+body.dark-theme .bring-input {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.bring-input:focus {
+  background: var(--bg-primary) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px var(--accent-primary-glow), inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.bring-input-wrapper:focus-within .bring-input-icon {
+  color: var(--accent-primary) !important;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
