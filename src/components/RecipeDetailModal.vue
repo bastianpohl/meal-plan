@@ -373,6 +373,27 @@
               </div>
             </div>
           </div>
+
+          <!-- Pagination -->
+          <div v-if="!searchingImages && searchResults.length > 0 && isUnsplashConfigured" class="search-pagination">
+            <button 
+              class="btn btn-secondary btn-pagination" 
+              @click="loadPreviousPage" 
+              :disabled="currentPage <= 1"
+            >
+              <ion-icon name="arrow-back-outline"></ion-icon>
+              Zurück
+            </button>
+            <span class="page-info">Seite {{ currentPage }}</span>
+            <button 
+              class="btn btn-secondary btn-pagination" 
+              @click="loadNextPage"
+              :disabled="searchResults.length < 6"
+            >
+              Weiter
+              <ion-icon name="arrow-forward-outline"></ion-icon>
+            </button>
+          </div>
           
           <div v-else-if="searched && searchResults.length === 0" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0;">
             Keine Bilder zu diesem Suchbegriff gefunden.
@@ -567,6 +588,7 @@ const downloadingImage = ref(false);
 const downloadingImageId = ref(null);
 const isUnsplashConfigured = ref(false);
 const searchError = ref('');
+const currentPage = ref(1);
 
 async function checkUnsplashConfig() {
   try {
@@ -586,17 +608,21 @@ function openImageSearch() {
   searchResults.value = [];
   searched.value = false;
   searchError.value = '';
+  currentPage.value = 1;
   isSearchOpen.value = true;
   checkUnsplashConfig();
 }
 
-async function searchImages() {
+async function searchImages(pageReset = true) {
   if (!searchQuery.value.trim()) return;
+  if (pageReset) {
+    currentPage.value = 1;
+  }
   searchingImages.value = true;
   searched.value = true;
   searchError.value = '';
   try {
-    const res = await fetch(`/api/recipes/search-images?query=${encodeURIComponent(searchQuery.value.trim())}`);
+    const res = await fetch(`/api/recipes/search-images?query=${encodeURIComponent(searchQuery.value.trim())}&page=${currentPage.value}`);
     const data = await res.json();
     if (res.ok) {
       isUnsplashConfigured.value = data.unsplashConfigured;
@@ -614,6 +640,18 @@ async function searchImages() {
     searchResults.value = [];
   } finally {
     searchingImages.value = false;
+  }
+}
+
+async function loadNextPage() {
+  currentPage.value++;
+  await searchImages(false);
+}
+
+async function loadPreviousPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    await searchImages(false);
   }
 }
 
@@ -1184,5 +1222,32 @@ async function deleteRecipe() {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.search-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.page-info {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 60px;
+  text-align: center;
+}
+
+.btn-pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
 }
 </style>

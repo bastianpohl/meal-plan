@@ -468,7 +468,8 @@ app.get('/api/recipes', async (req, res) => {
 
 // GET Search images for recipe title
 app.get('/api/recipes/search-images', async (req, res) => {
-  const { query } = req.query;
+  const { query, page } = req.query;
+  const pageNum = parseInt(page, 10) || 1;
   if (!query) {
     return res.status(400).json({ error: 'Suchbegriff fehlt' });
   }
@@ -481,7 +482,7 @@ app.get('/api/recipes/search-images', async (req, res) => {
 
     // Call Unsplash API
     const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=6`,
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=6&page=${pageNum}`,
       {
         headers: {
           'Authorization': `Client-ID ${accessKey}`
