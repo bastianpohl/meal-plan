@@ -466,6 +466,52 @@ app.get('/api/recipes', async (req, res) => {
   }
 });
 
+// GET Search images for recipe title
+app.get('/api/recipes/search-images', async (req, res) => {
+  const { query } = req.query;
+  if (!query) {
+    return res.status(400).json({ error: 'Suchbegriff fehlt' });
+  }
+
+  try {
+    const accessKey = await getSetting('unsplash_access_key');
+    if (!accessKey) {
+      return res.json({ unsplashConfigured: false });
+    }
+
+    // Call Unsplash API
+    const response = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=6`,
+      {
+        headers: {
+          'Authorization': `Client-ID ${accessKey}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({ error: 'Ungültiger Unsplash API-Key' });
+      }
+      throw new Error(`Unsplash HTTP Fehler: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const results = (data.results || []).map(photo => ({
+      id: photo.id,
+      url: photo.urls.regular,
+      thumbnail: photo.urls.small,
+      author: photo.user.name,
+      authorUrl: photo.user.links.html
+    }));
+
+    res.json({ unsplashConfigured: true, results });
+  } catch (error) {
+    console.error('Fehler bei Unsplash Bildsuche:', error);
+    res.status(500).json({ error: 'Serverfehler bei der Bildsuche' });
+  }
+});
+
 // GET single recipe
 app.get('/api/recipes/:id', async (req, res) => {
   try {
@@ -1385,52 +1431,6 @@ app.get('/api/link-preview', async (req, res) => {
   } catch (error) {
     console.error('Fehler bei Link-Preview Generierung:', error);
     res.status(500).json({ error: 'Serverfehler bei der Linkvorschau-Generierung' });
-  }
-});
-
-// GET Search images for recipe title
-app.get('/api/recipes/search-images', async (req, res) => {
-  const { query } = req.query;
-  if (!query) {
-    return res.status(400).json({ error: 'Suchbegriff fehlt' });
-  }
-
-  try {
-    const accessKey = await getSetting('unsplash_access_key');
-    if (!accessKey) {
-      return res.json({ unsplashConfigured: false });
-    }
-
-    // Call Unsplash API
-    const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=6`,
-      {
-        headers: {
-          'Authorization': `Client-ID ${accessKey}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        return res.status(401).json({ error: 'Ungültiger Unsplash API-Key' });
-      }
-      throw new Error(`Unsplash HTTP Fehler: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const results = (data.results || []).map(photo => ({
-      id: photo.id,
-      url: photo.urls.regular,
-      thumbnail: photo.urls.small,
-      author: photo.user.name,
-      authorUrl: photo.user.links.html
-    }));
-
-    res.json({ unsplashConfigured: true, results });
-  } catch (error) {
-    console.error('Fehler bei Unsplash Bildsuche:', error);
-    res.status(500).json({ error: 'Serverfehler bei der Bildsuche' });
   }
 });
 

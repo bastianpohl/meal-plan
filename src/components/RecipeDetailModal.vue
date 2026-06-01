@@ -323,6 +323,12 @@
             </button>
           </div>
           
+          <!-- Search Error Message -->
+          <div v-if="searchError" style="margin-top: 10px; font-size: 12px; color: var(--system-red); display: flex; align-items: center; gap: 4px; background: rgba(230, 57, 70, 0.08); padding: 10px; border-radius: 8px; border: 1px solid rgba(230, 57, 70, 0.15);">
+            <ion-icon name="alert-circle-outline" style="font-size: 16px; flex-shrink: 0;"></ion-icon>
+            <span>{{ searchError }}</span>
+          </div>
+          
           <!-- Instructions if Unsplash is not configured -->
           <div v-if="!isUnsplashConfigured" class="unsplash-not-configured-alert">
             <div class="alert-icon-text">
@@ -560,6 +566,7 @@ const searched = ref(false);
 const downloadingImage = ref(false);
 const downloadingImageId = ref(null);
 const isUnsplashConfigured = ref(false);
+const searchError = ref('');
 
 async function checkUnsplashConfig() {
   try {
@@ -578,6 +585,7 @@ function openImageSearch() {
   searchQuery.value = localRecipe.value.title;
   searchResults.value = [];
   searched.value = false;
+  searchError.value = '';
   isSearchOpen.value = true;
   checkUnsplashConfig();
 }
@@ -586,15 +594,24 @@ async function searchImages() {
   if (!searchQuery.value.trim()) return;
   searchingImages.value = true;
   searched.value = true;
+  searchError.value = '';
   try {
     const res = await fetch(`/api/recipes/search-images?query=${encodeURIComponent(searchQuery.value.trim())}`);
+    const data = await res.json();
     if (res.ok) {
-      const data = await res.json();
       isUnsplashConfigured.value = data.unsplashConfigured;
       searchResults.value = data.results || [];
+      if (data.results && data.results.length === 0) {
+        searchError.value = 'Keine Bilder zu diesem Suchbegriff gefunden.';
+      }
+    } else {
+      searchError.value = data.error || 'Fehler beim Laden der Suchergebnisse.';
+      searchResults.value = [];
     }
   } catch (err) {
     console.error('Fehler bei Bildsuche:', err);
+    searchError.value = 'Netzwerkfehler bei der Bildsuche.';
+    searchResults.value = [];
   } finally {
     searchingImages.value = false;
   }
