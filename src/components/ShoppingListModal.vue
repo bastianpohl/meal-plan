@@ -73,20 +73,23 @@
 
           <div v-else class="shopping-ingredients-list-container">
             <ul class="detail-ingredients-list" style="margin: 0; padding: 0;">
-              <li v-for="(ing, idx) in ingredients" :key="idx" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border-color);">
+              <li v-for="(ing, idx) in ingredients" :key="idx" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border-color); gap: 12px; width: 100%;">
+                <!-- Left: Checkbox & Name -->
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex-grow: 1; margin: 0; min-width: 0;">
                   <input
                     type="checkbox"
                     :checked="checkedItems.includes(ing.name.toLowerCase())"
                     @change="toggleChecked(ing.name)"
+                    style="cursor: pointer; flex-shrink: 0;"
                   />
                   <span :style="{ 
                     textDecoration: checkedItems.includes(ing.name.toLowerCase()) ? 'line-through' : 'none', 
                     opacity: checkedItems.includes(ing.name.toLowerCase()) ? 0.5 : 1,
                     transition: 'all 0.2s ease',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    wordBreak: 'break-word',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    lineHeight: '1.4'
                   }">
                     {{ ing.name }}
                     <span v-if="ing.count > 1" style="color: var(--accent-primary); font-weight: 600; margin-left: 4px;">
@@ -95,21 +98,22 @@
                   </span>
                 </label>
 
-                <!-- Bring! Actions & Prefs -->
-                <div v-if="isBringConfigured" style="display: flex; align-items: center; flex-shrink: 0; margin-left: 10px;">
+                <!-- Right: Bring! Actions & Prefs -->
+                <div v-if="isBringConfigured" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
                   <!-- Quantity Preference Dropdown -->
                   <select 
                     v-if="ing.count > 1"
                     :value="getQtyPreference(ing.name)" 
                     @change="setQtyPreference(ing.name, $event.target.value)"
                     class="qty-select"
+                    style="margin: 0;"
                   >
                     <option value="yes">mit Menge</option>
                     <option value="no">ohne Menge</option>
                   </select>
 
                   <!-- Status Badge or Action Button -->
-                  <div style="display: flex; align-items: center; width: 95px; justify-content: flex-end;">
+                  <div style="display: flex; align-items: center; justify-content: flex-end; width: 95px;">
                     <span v-if="isOnBringList(ing.name)" class="bring-badge bring-active" title="Bereits auf Bring!">
                       <ion-icon name="checkmark-done-outline" style="font-size: 14px;"></ion-icon>
                       Gelistet
@@ -353,6 +357,23 @@ watch(() => props.todayStr, () => {
 <style scoped>
 .shopping-list-panel {
   width: 540px !important;
+  height: 80vh !important;
+  max-height: 80vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.shopping-list-panel .settings-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding-bottom: 32px !important;
+}
+
+.shopping-list-panel .detail-ingredients-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
 }
 
 .loading-spinner {
