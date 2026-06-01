@@ -338,7 +338,7 @@
               @click="suggestDirectImage" 
               :disabled="downloadingImage"
             >
-              <ion-icon :name="downloadingImage ? 'sync-outline' : 'sparkles-outline'" :class="{ 'spin': downloadingImage }"></ion-icon>
+              <ion-icon :name="downloadingImage ? 'sync-outline' : 'color-wand-outline'" :class="{ 'spin': downloadingImage }"></ion-icon>
               {{ downloadingImage ? 'Bild wird geladen...' : 'Direkt passendes Bild vorschlagen (Keyless)' }}
             </button>
           </div>
