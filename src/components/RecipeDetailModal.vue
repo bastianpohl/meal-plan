@@ -196,7 +196,48 @@
           <!-- Notes Section -->
           <div class="detail-body-section" v-if="localRecipe.notes && localRecipe.notes.trim().length > 0">
             <h3>Zubereitung / Notizen</h3>
-            <p style="white-space: pre-wrap;">{{ localRecipe.notes }}</p>
+            <p style="white-space: pre-wrap; word-break: break-word; line-height: 1.5;">
+              <template v-for="(part, pIdx) in parsedNotes" :key="pIdx">
+                <span v-if="part.type === 'text'">{{ part.content }}</span>
+                <a v-else :href="part.content" target="_blank" rel="noopener noreferrer" class="note-link">
+                  {{ part.content }}
+                  <ion-icon name="open-outline" style="font-size: 11px; margin-left: 2px; vertical-align: middle;"></ion-icon>
+                </a>
+              </template>
+            </p>
+
+            <!-- Link Previews Container -->
+            <div v-if="notesUrls.length > 0" class="link-previews-container" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+              <template v-for="url in notesUrls" :key="url">
+                <!-- Shimmer loading state -->
+                <div v-if="loadingPreviews[url]" class="link-preview-card shimmer-loading">
+                  <div class="shimmer-content">
+                    <div class="shimmer-line site"></div>
+                    <div class="shimmer-line title"></div>
+                    <div class="shimmer-line desc"></div>
+                  </div>
+                  <div class="shimmer-img"></div>
+                </div>
+
+                <!-- Active preview card -->
+                <a 
+                  v-else-if="linkPreviews[url] && linkPreviews[url].title" 
+                  :href="url" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="link-preview-card"
+                >
+                  <div class="preview-text">
+                    <span class="preview-site">{{ linkPreviews[url].siteName }}</span>
+                    <h4 class="preview-title">{{ linkPreviews[url].title }}</h4>
+                    <p class="preview-desc" v-if="linkPreviews[url].description">{{ linkPreviews[url].description }}</p>
+                  </div>
+                  <div class="preview-img-wrapper" v-if="linkPreviews[url].image">
+                    <img :src="linkPreviews[url].image" alt="Vorschau" class="preview-image" @error="linkPreviews[url].image = null" />
+                  </div>
+                </a>
+              </template>
+            </div>
           </div>
 
           <!-- Quick Assign slots lunch/dinner for mobile -->
@@ -412,6 +453,74 @@ function toggleIngredient(ingredient) {
   }
 }
 
+// Link Preview State and Logic
+const linkPreviews = ref({});
+const loadingPreviews = ref({});
+
+const notesUrls = computed(() => {
+  if (!localRecipe.value || !localRecipe.value.notes) return [];
+  const urlRegex = /(https?:\/\/[^\s]+)/gi;
+  const matches = localRecipe.value.notes.match(urlRegex) || [];
+  return [...new Set(matches.map(url => url.trim()))];
+});
+
+const parsedNotes = computed(() => {
+  const text = localRecipe.value?.notes;
+  if (!text) return [];
+  const urlRegex = /(https?:\/\/[^\s]+)/gi;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = urlRegex.exec(text)) !== null) {
+    const url = match[0];
+    const index = match.index;
+    if (index > lastIndex) {
+      parts.push({ type: 'text', content: text.substring(lastIndex, index) });
+    }
+    parts.push({ type: 'link', content: url });
+    lastIndex = urlRegex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', content: text.substring(lastIndex) });
+  }
+  return parts;
+});
+
+async function loadLinkPreviews() {
+  const urls = notesUrls.value;
+  for (const url of urls) {
+    if (linkPreviews.value[url] !== undefined || loadingPreviews.value[url]) continue;
+    
+    loadingPreviews.value[url] = true;
+    try {
+      const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
+      if (res.ok) {
+        linkPreviews.value[url] = await res.json();
+      } else {
+        linkPreviews.value[url] = null;
+      }
+    } catch (err) {
+      console.error('Fehler beim Laden der Linkvorschau:', err);
+      linkPreviews.value[url] = null;
+    } finally {
+      loadingPreviews.value[url] = false;
+    }
+  }
+}
+
+// Watchers to trigger loading link previews
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    loadLinkPreviews();
+  }
+});
+
+watch(notesUrls, () => {
+  if (props.isOpen) {
+    loadLinkPreviews();
+  }
+}, { deep: true });
+
 const parsedTags = computed(() => {
   if (!localRecipe.value || !localRecipe.value.tags) return [];
   if (Array.isArray(localRecipe.value.tags)) return localRecipe.value.tags;
@@ -511,3 +620,154 @@ async function deleteRecipe() {
   }
 }
 </script>
+
+<style scoped>
+.note-link {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  word-break: break-all;
+}
+
+.note-link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.link-preview-card {
+  display: flex;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.22, 1);
+  max-width: 100%;
+}
+
+.link-preview-card:hover {
+  transform: translateY(-2px);
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.preview-text {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.preview-site {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.preview-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.preview-img-wrapper {
+  width: 110px;
+  min-height: 110px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.link-preview-card:hover .preview-image {
+  transform: scale(1.05);
+}
+
+/* Shimmer Loading Styles */
+.shimmer-loading {
+  background: var(--bg-tertiary);
+  pointer-events: none;
+}
+
+.shimmer-content {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shimmer-line {
+  height: 12px;
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--bg-secondary) 50%, var(--border-color) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.shimmer-line.title {
+  width: 70%;
+  height: 14px;
+}
+
+.shimmer-line.desc {
+  width: 90%;
+  height: 12px;
+}
+
+.shimmer-line.site {
+  width: 40%;
+  height: 10px;
+}
+
+.shimmer-img {
+  width: 110px;
+  height: 110px;
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--bg-secondary) 50%, var(--border-color) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+</style>

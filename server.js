@@ -225,6 +225,18 @@ async function initDb() {
     );
   `);
 
+  // Link Previews Cache Table
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS link_previews (
+      url TEXT PRIMARY KEY,
+      title TEXT,
+      description TEXT,
+      image TEXT,
+      site_name TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   console.log('Datenbanktabellen initialisiert.');
   
   // Trigger self-seeding if database is completely empty
@@ -1211,6 +1223,143 @@ app.delete('/api/assignments/:id/ingredients', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Serverfehler beim Zurücksetzen der Zutaten' });
+  }
+});
+
+// Helper functions for metadata parsing
+function decodeHtmlEntities(str) {
+  if (!str) return str;
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&Ouml;/g, 'Ö')
+    .replace(/&ouml;/g, 'ö')
+    .replace(/&Auml;/g, 'Ä')
+    .replace(/&auml;/g, 'ä')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&szlig;/g, 'ß');
+}
+
+function extractMeta(html, propertyOrName) {
+  const regex = new RegExp(`<meta[^>]*?(?:property|name)=["']${propertyOrName}["'][^>]*?content=["']([^"']*)["']`, 'i');
+  const match = html.match(regex);
+  if (match) return match[1];
+  // Try alternate attribute order: content first
+  const altRegex = new RegExp(`<meta[^>]*?content=["']([^"']*)["'][^>]*?(?:property|name)=["']${propertyOrName}["']`, 'i');
+  const altMatch = html.match(altRegex);
+  return altMatch ? altMatch[1] : null;
+}
+
+function extractTitle(html) {
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? match[1].trim() : null;
+}
+
+// GET URL Link Preview metadata
+app.get('/api/link-preview', async (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ error: 'URL Parameter fehlt' });
+  }
+
+  try {
+    // 1. Check SQLite Cache
+    const cached = await dbGet('SELECT * FROM link_previews WHERE url = ?', [url]);
+    if (cached) {
+      return res.json({
+        title: cached.title,
+        description: cached.description,
+        image: cached.image,
+        siteName: cached.site_name
+      });
+    }
+
+    // 2. Fetch page HTML
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+    let html = '';
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP Fehler: ${response.status}`);
+      }
+
+      // Check content-type to make sure it's HTML
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
+        throw new Error('Kein HTML-Dokument');
+      }
+
+      html = await response.text();
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      console.warn(`Fehler beim Fetchen der URL (${url}):`, fetchErr.message);
+      // Return minimalist fallback response without caching to retry later if it was a temporary network issue
+      let domain = '';
+      try { domain = new URL(url).hostname.replace('www.', ''); } catch (_) {}
+      return res.json({
+        title: domain || url,
+        description: '',
+        image: '',
+        siteName: domain
+      });
+    }
+
+    // 3. Parse Metadata
+    let title = extractMeta(html, 'og:title') || extractMeta(html, 'twitter:title') || extractTitle(html) || '';
+    let description = extractMeta(html, 'og:description') || extractMeta(html, 'twitter:description') || extractMeta(html, 'description') || '';
+    let image = extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image') || '';
+    let siteName = extractMeta(html, 'og:site_name') || '';
+
+    // Clean html entities
+    title = decodeHtmlEntities(title);
+    description = decodeHtmlEntities(description);
+    siteName = decodeHtmlEntities(siteName);
+
+    // Resolve relative image URLs
+    if (image && !image.startsWith('http://') && !image.startsWith('https://')) {
+      try {
+        image = new URL(image, url).href;
+      } catch (_) {}
+    }
+
+    // Generate siteName fallback
+    let domain = '';
+    try {
+      domain = new URL(url).hostname.replace('www.', '');
+    } catch (_) {}
+    if (!siteName) {
+      siteName = domain;
+    }
+    if (!title) {
+      title = domain || url;
+    }
+
+    // 4. Save to Cache
+    await dbRun(
+      'INSERT OR REPLACE INTO link_previews (url, title, description, image, site_name) VALUES (?, ?, ?, ?, ?)',
+      [url, title, description, image, siteName]
+    );
+
+    res.json({ title, description, image, siteName });
+  } catch (error) {
+    console.error('Fehler bei Link-Preview Generierung:', error);
+    res.status(500).json({ error: 'Serverfehler bei der Linkvorschau-Generierung' });
   }
 });
 
