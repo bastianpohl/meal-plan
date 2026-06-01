@@ -69,6 +69,13 @@
             >
               <ion-icon name="trash-outline" style="font-size:14px;"></ion-icon> Bild löschen
             </button>
+            <button
+              class="btn btn-primary btn-small"
+              style="background-color: var(--accent-primary); border-color: var(--accent-primary); color: #121212; font-weight: 600;"
+              @click="openImageSearch"
+            >
+              <ion-icon name="cloud-download-outline" style="font-size:14px;"></ion-icon> Online suchen
+            </button>
             <label class="btn btn-secondary btn-small image-upload-label" style="cursor: pointer;">
               <ion-icon name="image-outline" style="font-size:14px;"></ion-icon> Fotos hinzufügen
               <input type="file" multiple accept="image/*" style="display:none;" @change="addImages" />
@@ -290,6 +297,83 @@
         </div>
       </div>
     </div>
+
+    <!-- Image Search Overlay -->
+    <div v-if="isSearchOpen" class="image-search-overlay glass" @click.self="isSearchOpen = false">
+      <div class="image-search-panel">
+        <div class="image-search-header">
+          <h3>Online-Bilder suchen für "{{ localRecipe.title }}"</h3>
+          <button class="btn-close-search" title="Schließen" @click="isSearchOpen = false">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+        
+        <div class="image-search-body">
+          <!-- Search bar -->
+          <div class="search-input-wrapper">
+            <input 
+              type="text" 
+              v-model="searchQuery" 
+              placeholder="Suchbegriff (z. B. Pizza Margherita)" 
+              class="form-control"
+              @keydown.enter="searchImages"
+            />
+            <button class="btn btn-primary" @click="searchImages" :disabled="searchingImages">
+              <ion-icon name="search-outline"></ion-icon> Suchen
+            </button>
+          </div>
+          
+          <!-- Instructions if Unsplash is not configured -->
+          <div v-if="!isUnsplashConfigured" class="unsplash-not-configured-alert">
+            <div class="alert-icon-text">
+              <ion-icon name="information-circle-outline"></ion-icon>
+              <p>
+                Kein Unsplash-Schlüssel hinterlegt. 
+                Du kannst einen <strong>kostenlosen Unsplash Access-Key</strong> in den Einstellungen speichern, um aus mehreren passenden Bildern zu wählen.
+              </p>
+            </div>
+            <button 
+              class="btn btn-secondary btn-full-width" 
+              style="margin-top: 10px; background-color: var(--accent-secondary); color: #121212; border: none; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;" 
+              @click="suggestDirectImage" 
+              :disabled="downloadingImage"
+            >
+              <ion-icon :name="downloadingImage ? 'sync-outline' : 'sparkles-outline'" :class="{ 'spin': downloadingImage }"></ion-icon>
+              {{ downloadingImage ? 'Bild wird geladen...' : 'Direkt passendes Bild vorschlagen (Keyless)' }}
+            </button>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div v-if="searchingImages" class="search-loading">
+            <div class="loading-spinner"></div>
+            <span>Passende Fotos werden gesucht...</span>
+          </div>
+
+          <!-- Results Grid -->
+          <div v-else-if="searchResults.length > 0" class="search-results-grid">
+            <div 
+              v-for="img in searchResults" 
+              :key="img.id" 
+              class="search-result-card"
+              @click="downloadImage(img)"
+              :class="{ 'downloading': downloadingImageId === img.id }"
+            >
+              <img :src="img.thumbnail" alt="Unsplash Foto" />
+              <div class="author-credits">
+                von {{ img.author }}
+              </div>
+              <div v-if="downloadingImageId === img.id" class="downloading-spinner-overlay">
+                <div class="loading-spinner"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else-if="searched && searchResults.length === 0" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0;">
+            Keine Bilder zu diesem Suchbegriff gefunden.
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -464,6 +548,109 @@ function toggleIngredient(ingredient) {
   }
   if (localRecipe.value && localRecipe.value.id) {
     localStorage.setItem(`ingredients_checked_${localRecipe.value.id}`, JSON.stringify(checkedIngredients.value));
+  }
+}
+
+// Image Search States & Functions
+const isSearchOpen = ref(false);
+const searchQuery = ref('');
+const searchingImages = ref(false);
+const searchResults = ref([]);
+const searched = ref(false);
+const downloadingImage = ref(false);
+const downloadingImageId = ref(null);
+const isUnsplashConfigured = ref(false);
+
+async function checkUnsplashConfig() {
+  try {
+    const res = await fetch('/api/settings/unsplash');
+    if (res.ok) {
+      const data = await res.json();
+      isUnsplashConfigured.value = data.isConfigured;
+    }
+  } catch (err) {
+    console.error('Fehler beim Prüfen der Unsplash Konfiguration:', err);
+  }
+}
+
+function openImageSearch() {
+  if (!localRecipe.value) return;
+  searchQuery.value = localRecipe.value.title;
+  searchResults.value = [];
+  searched.value = false;
+  isSearchOpen.value = true;
+  checkUnsplashConfig();
+}
+
+async function searchImages() {
+  if (!searchQuery.value.trim()) return;
+  searchingImages.value = true;
+  searched.value = true;
+  try {
+    const res = await fetch(`/api/recipes/search-images?query=${encodeURIComponent(searchQuery.value.trim())}`);
+    if (res.ok) {
+      const data = await res.json();
+      isUnsplashConfigured.value = data.unsplashConfigured;
+      searchResults.value = data.results || [];
+    }
+  } catch (err) {
+    console.error('Fehler bei Bildsuche:', err);
+  } finally {
+    searchingImages.value = false;
+  }
+}
+
+async function downloadImage(img) {
+  if (downloadingImage.value) return;
+  downloadingImage.value = true;
+  downloadingImageId.value = img.id;
+  try {
+    const res = await fetch(`/api/recipes/${localRecipe.value.id}/download-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageUrl: img.url
+      })
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      localRecipe.value = updated;
+      selectedImageIndex.value = updated.images.findIndex(i => i.is_cover === 1);
+      if (selectedImageIndex.value === -1) selectedImageIndex.value = 0;
+      emit('recipe-updated', updated);
+      isSearchOpen.value = false; // close modal on success!
+    }
+  } catch (err) {
+    console.error('Fehler beim Herunterladen des Bildes:', err);
+  } finally {
+    downloadingImage.value = false;
+    downloadingImageId.value = null;
+  }
+}
+
+async function suggestDirectImage() {
+  if (downloadingImage.value) return;
+  downloadingImage.value = true;
+  try {
+    const res = await fetch(`/api/recipes/${localRecipe.value.id}/download-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}) // empty body triggers Keyless mode (Lorem Flickr)
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      localRecipe.value = updated;
+      selectedImageIndex.value = updated.images.findIndex(i => i.is_cover === 1);
+      if (selectedImageIndex.value === -1) selectedImageIndex.value = 0;
+      emit('recipe-updated', updated);
+      isSearchOpen.value = false;
+    }
+  } catch (err) {
+    console.error('Fehler beim automatischen Bildvorschlag:', err);
+  } finally {
+    downloadingImage.value = false;
   }
 }
 
@@ -783,5 +970,202 @@ async function deleteRecipe() {
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* Image Search Styles */
+.image-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 11000; /* above detail modal */
+  backdrop-filter: blur(10px) saturate(120%);
+}
+
+.image-search-panel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 580px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.image-search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.image-search-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.btn-close-search {
+  background: var(--bg-tertiary);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.btn-close-search:hover {
+  background: var(--error-color);
+  color: white;
+  transform: scale(1.05);
+}
+
+.image-search-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-input-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.search-input-wrapper input {
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  outline: none;
+  font-size: 14px;
+}
+
+.search-input-wrapper input:focus {
+  border-color: var(--accent-primary);
+}
+
+.unsplash-not-configured-alert {
+  background: rgba(85, 175, 200, 0.08);
+  border: 1px dashed rgba(85, 175, 200, 0.3);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.alert-icon-text {
+  display: flex;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.alert-icon-text ion-icon {
+  font-size: 18px;
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.alert-icon-text p {
+  margin: 0;
+}
+
+.search-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--text-muted);
+  gap: 12px;
+  font-size: 13px;
+}
+
+.search-results-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+@media (max-width: 480px) {
+  .search-results-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.search-result-card {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  transition: all 0.25s ease;
+}
+
+.search-result-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.search-result-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(85, 175, 200, 0.15);
+}
+
+.search-result-card:hover img {
+  transform: scale(1.04);
+}
+
+.author-credits {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.downloading-spinner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

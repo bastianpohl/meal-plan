@@ -177,6 +177,46 @@
           </div>
         </section>
 
+        <!-- Unsplash Integration Section -->
+        <section class="settings-section">
+          <h3 class="settings-section-title">
+            <ion-icon name="image-outline" style="color: var(--accent-primary);"></ion-icon>
+            Unsplash-Bilderkopplung
+          </h3>
+          <p class="settings-section-desc">Hinterlege einen kostenlosen Unsplash Access-Key, um passende Fotos direkt aus einer Galerie auszuwählen.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 16px;">
+            <div class="bring-input-group">
+              <label class="bring-input-label">Unsplash Access-Key</label>
+              <div class="bring-input-wrapper">
+                <ion-icon name="key-outline" class="bring-input-icon"></ion-icon>
+                <input 
+                  type="password" 
+                  v-model="unsplashAccessKey" 
+                  placeholder="Dein Unsplash Access Key" 
+                  class="bring-input"
+                />
+              </div>
+            </div>
+
+            <!-- Save settings status and action -->
+            <div v-if="unsplashSuccessMessage" style="margin-top: 6px; font-size: 12px; color: var(--accent-primary); display: flex; align-items: center; gap: 4px;">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+              {{ unsplashSuccessMessage }}
+            </div>
+
+            <button 
+              class="btn btn-primary btn-full-width" 
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; margin-top: 10px;"
+              @click="handleUnsplashSave"
+              :disabled="savingUnsplash"
+            >
+              <ion-icon name="save-outline"></ion-icon>
+              {{ savingUnsplash ? 'Wird gespeichert...' : 'Unsplash Key speichern' }}
+            </button>
+          </div>
+        </section>
+
         <!-- Developer Functions (Only visible in dev environment) -->
         <section class="settings-section dev-section" v-if="isDevMode">
           <h3 class="settings-section-title dev-title" style="color: var(--accent-primary);">
@@ -279,10 +319,11 @@ const savingBring = ref(false);
 const bringError = ref('');
 const bringSuccessMessage = ref('');
 
-// Load Bring! settings when modal is opened
+// Load Bring! and Unsplash settings when modal is opened
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     loadBringSettings();
+    loadUnsplashSettings();
   }
 });
 
@@ -371,6 +412,46 @@ async function handleBringSave() {
     bringError.value = 'Netzwerkfehler beim Speichern der Einstellungen.';
   } finally {
     savingBring.value = false;
+  }
+}
+
+// Unsplash States
+const unsplashAccessKey = ref('');
+const savingUnsplash = ref(false);
+const unsplashSuccessMessage = ref('');
+
+async function loadUnsplashSettings() {
+  unsplashSuccessMessage.value = '';
+  try {
+    const res = await fetch('/api/settings/unsplash');
+    if (res.ok) {
+      const data = await res.json();
+      unsplashAccessKey.value = data.unsplashAccessKey || '';
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Unsplash-Einstellungen:', err);
+  }
+}
+
+async function handleUnsplashSave() {
+  unsplashSuccessMessage.value = '';
+  savingUnsplash.value = true;
+  try {
+    const res = await fetch('/api/settings/unsplash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unsplashAccessKey: unsplashAccessKey.value
+      })
+    });
+
+    if (res.ok) {
+      unsplashSuccessMessage.value = 'Unsplash-Key erfolgreich gespeichert!';
+    }
+  } catch (err) {
+    console.error('Fehler beim Speichern der Unsplash-Einstellungen:', err);
+  } finally {
+    savingUnsplash.value = false;
   }
 }
 </script>

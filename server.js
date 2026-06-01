@@ -1081,6 +1081,31 @@ app.post('/api/settings/bring', async (req, res) => {
   }
 });
 
+// GET Unsplash settings
+app.get('/api/settings/unsplash', async (req, res) => {
+  try {
+    const key = await getSetting('unsplash_access_key') || '';
+    res.json({ unsplashAccessKey: key, isConfigured: !!key });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Abrufen der Unsplash-Einstellungen' });
+  }
+});
+
+// POST Save Unsplash settings
+app.post('/api/settings/unsplash', async (req, res) => {
+  try {
+    const { unsplashAccessKey } = req.body;
+    if (unsplashAccessKey !== undefined) {
+      await setSetting('unsplash_access_key', unsplashAccessKey.trim());
+    }
+    res.json({ message: 'Unsplash-Einstellungen erfolgreich gespeichert' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Serverfehler beim Speichern der Unsplash-Einstellungen' });
+  }
+});
+
 // POST Test Bring! connection & Load Lists
 app.post('/api/settings/bring/test', async (req, res) => {
   try {
@@ -1360,6 +1385,140 @@ app.get('/api/link-preview', async (req, res) => {
   } catch (error) {
     console.error('Fehler bei Link-Preview Generierung:', error);
     res.status(500).json({ error: 'Serverfehler bei der Linkvorschau-Generierung' });
+  }
+});
+
+// GET Search images for recipe title
+app.get('/api/recipes/search-images', async (req, res) => {
+  const { query } = req.query;
+  if (!query) {
+    return res.status(400).json({ error: 'Suchbegriff fehlt' });
+  }
+
+  try {
+    const accessKey = await getSetting('unsplash_access_key');
+    if (!accessKey) {
+      return res.json({ unsplashConfigured: false });
+    }
+
+    // Call Unsplash API
+    const response = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=6`,
+      {
+        headers: {
+          'Authorization': `Client-ID ${accessKey}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({ error: 'Ungültiger Unsplash API-Key' });
+      }
+      throw new Error(`Unsplash HTTP Fehler: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const results = (data.results || []).map(photo => ({
+      id: photo.id,
+      url: photo.urls.regular,
+      thumbnail: photo.urls.small,
+      author: photo.user.name,
+      authorUrl: photo.user.links.html
+    }));
+
+    res.json({ unsplashConfigured: true, results });
+  } catch (error) {
+    console.error('Fehler bei Unsplash Bildsuche:', error);
+    res.status(500).json({ error: 'Serverfehler bei der Bildsuche' });
+  }
+});
+
+// POST Download online image and set as cover image
+app.post('/api/recipes/:id/download-image', async (req, res) => {
+  const recipeId = req.params.id;
+  const { imageUrl } = req.body;
+
+  try {
+    const recipe = await dbGet('SELECT * FROM recipes WHERE id = ?', [recipeId]);
+    if (!recipe) {
+      return res.status(404).json({ error: 'Rezept nicht gefunden' });
+    }
+
+    let finalImageUrl = imageUrl;
+    
+    // Keyless-Modus: Fetch matching image from Lorem Flickr if no imageUrl is supplied
+    if (!finalImageUrl) {
+      // Use the recipe title for Lorem Flickr
+      const cleanTitle = recipe.title.replace(/[^\w\söäüßÄÖÜ]/gi, '').trim();
+      finalImageUrl = `https://loremflickr.com/800/600/${encodeURIComponent(cleanTitle)}`;
+      console.log(`Keyless Mode: Laden von Lorem Flickr mit Begriff "${cleanTitle}"...`);
+    }
+
+    // Download the image using fetch
+    const response = await fetch(finalImageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Bild-Download HTTP Fehler: ${response.status}`);
+    }
+
+    // Handle redirects (Lorem Flickr redirects to a concrete flickr URL)
+    const finalDownloadedUrl = response.url || finalImageUrl;
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const filename = `downloaded-${uniqueSuffix}.jpg`;
+    const filepath = path.join(uploadsDir, filename);
+
+    // Save image to disk
+    fs.writeFileSync(filepath, buffer);
+    const relativePath = `uploads/${filename}`;
+
+    // SQLite Transaction-like logic to set as cover
+    // 1. Reset current cover images for this recipe to 0
+    await dbRun('UPDATE recipe_images SET is_cover = 0 WHERE recipe_id = ?', [recipeId]);
+
+    // 2. Insert new image as cover
+    await dbRun(
+      'INSERT INTO recipe_images (recipe_id, image_path, is_cover) VALUES (?, ?, ?)',
+      [recipeId, relativePath, 1]
+    );
+
+    // Fetch the updated recipe with all images and ingredients to return
+    const updatedRecipe = await dbGet('SELECT * FROM recipes WHERE id = ?', [recipeId]);
+    const images = await dbAll('SELECT * FROM recipe_images WHERE recipe_id = ?', [recipeId]);
+    
+    // Fetch ingredients
+    const ingsRows = await dbAll(`
+      SELECT i.name 
+      FROM recipe_ingredients ri
+      JOIN ingredients i ON ri.ingredient_id = i.id
+      WHERE ri.recipe_id = ?
+    `, [recipeId]);
+    const ingredients = ingsRows.map(r => r.name);
+
+    // Fetch tags
+    const tagsRows = await dbAll(`
+      SELECT t.name 
+      FROM recipe_tags rt
+      JOIN tags t ON rt.tag_id = t.id
+      WHERE rt.recipe_id = ?
+    `, [recipeId]);
+    const tags = tagsRows.map(r => r.name);
+
+    res.json({
+      ...updatedRecipe,
+      images,
+      ingredients,
+      tags
+    });
+  } catch (error) {
+    console.error('Fehler beim Herunterladen des Rezeptbilds:', error);
+    res.status(500).json({ error: 'Serverfehler beim Herunterladen des Rezeptbilds' });
   }
 });
 
