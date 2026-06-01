@@ -196,13 +196,9 @@
           <!-- Notes Section -->
           <div class="detail-body-section" v-if="localRecipe.notes && localRecipe.notes.trim().length > 0">
             <h3>Zubereitung / Notizen</h3>
-            <p style="white-space: pre-wrap; word-break: break-word; line-height: 1.5;">
+            <p style="white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0 0 12px 0;">
               <template v-for="(part, pIdx) in parsedNotes" :key="pIdx">
-                <span v-if="part.type === 'text'">{{ part.content }}</span>
-                <a v-else :href="part.content" target="_blank" rel="noopener noreferrer" class="note-link">
-                  {{ part.content }}
-                  <ion-icon name="open-outline" style="font-size: 11px; margin-left: 2px; vertical-align: middle;"></ion-icon>
-                </a>
+                <span>{{ part.content }}</span>
               </template>
             </p>
 
@@ -234,6 +230,24 @@
                   </div>
                   <div class="preview-img-wrapper" v-if="linkPreviews[url].image">
                     <img :src="linkPreviews[url].image" alt="Vorschau" class="preview-image" @error="linkPreviews[url].image = null" />
+                  </div>
+                </a>
+
+                <!-- Fallback card if metadata failed or siteName/title is empty -->
+                <a 
+                  v-else 
+                  :href="url" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="link-preview-card fallback-card"
+                >
+                  <div class="preview-text" style="padding: 12px 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <ion-icon name="globe-outline" style="font-size: 16px; color: var(--accent-primary); flex-shrink: 0;"></ion-icon>
+                      <span class="preview-title" style="margin: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">
+                        {{ url }}
+                      </span>
+                    </div>
                   </div>
                 </a>
               </template>
@@ -477,13 +491,13 @@ const parsedNotes = computed(() => {
     if (index > lastIndex) {
       parts.push({ type: 'text', content: text.substring(lastIndex, index) });
     }
-    parts.push({ type: 'link', content: url });
     lastIndex = urlRegex.lastIndex;
   }
   if (lastIndex < text.length) {
     parts.push({ type: 'text', content: text.substring(lastIndex) });
   }
-  return parts;
+  // Trim trailing whitespaces/newlines for clean rendering
+  return parts.map(p => ({ ...p, content: p.content.trimEnd() })).filter(p => p.content.length > 0);
 });
 
 async function loadLinkPreviews() {
